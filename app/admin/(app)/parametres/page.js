@@ -26,8 +26,8 @@ export default async function Settings({ searchParams }) {
           <label className="f">Durée d'une mi-temps (min)<input type="number" name="half_minutes" min="1" defaultValue={s.half_minutes || 25} /></label>
           <label className="f">Durée d'une période de prolongation (min)<input type="number" name="et_minutes" min="1" defaultValue={s.et_minutes || 10} /></label>
           <label className="f">Suspension après N cartons jaunes<input type="number" name="yellow_suspension" min="1" defaultValue={s.yellow_suspension || 3} /></label>
-          <label className="f">Bannière (photo)<input type="file" name="banner" accept="image/png,image/jpeg,image/webp" /></label>
-          {s.banner_url ? <label className="f" style={{ flexDirection: 'row', alignItems: 'center' }}><input type="checkbox" name="remove_banner" value="1" style={{ width: 20, height: 20 }} />Retirer la bannière</label> : null}
+          <label className="f">Photo de fond du site<input type="file" name="banner" accept="image/png,image/jpeg,image/webp" /></label>
+          {s.banner_url ? <label className="f" style={{ flexDirection: 'row', alignItems: 'center' }}><input type="checkbox" name="remove_banner" value="1" style={{ width: 20, height: 20 }} />Revenir à la photo du stade par défaut</label> : null}
           <label className="f">Logo du tournoi<input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" /></label>
           {s.logo_url ? <label className="f" style={{ flexDirection: 'row', alignItems: 'center' }}><input type="checkbox" name="remove_logo" value="1" style={{ width: 20, height: 20 }} />Revenir au logo par défaut</label> : null}
         </div>

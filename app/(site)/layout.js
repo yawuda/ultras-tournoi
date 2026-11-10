@@ -9,7 +9,7 @@ export default async function SiteLayout({ children }) {
   const T = await loadT();
   const name = T.settings.name || 'Ultras Tournoi';
   return (
-    <>
+    <div className="site" style={T.settings.banner_url ? { '--bg-photo': `url("${T.settings.banner_url}")` } : undefined}>
       {T.settings.demo === '1' ? <div className="demo-bar">Données de démonstration : équipes, joueurs et résultats fictifs</div> : null}
       <header className="top">
         <div className="wrap">
@@ -27,6 +27,6 @@ export default async function SiteLayout({ children }) {
         </div>
       </footer>
       <AutoRefresh seconds={10} />
-    </>
+    </div>
   );
 }

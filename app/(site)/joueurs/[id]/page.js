@@ -24,8 +24,6 @@ export default async function PlayerPage({ params }) {
     for (const e of m.events) {
       if (e.player_id === p.id && e.type !== 'sub') log.push({ m, e, label: { goal: 'But', own_goal: 'But contre son camp', yellow: 'Carton jaune', red: 'Carton rouge' }[e.type] });
       else if (e.assist_id === p.id) log.push({ m, e, label: 'Passe décisive' });
-      else if (e.type === 'sub' && e.player_in_id === p.id) log.push({ m, e, label: 'Entrée en jeu' });
-      else if (e.type === 'sub' && e.player_id === p.id) log.push({ m, e, label: 'Sortie' });
     }
   }
   return (
@@ -53,7 +51,7 @@ export default async function PlayerPage({ params }) {
         <div className="card">
           {log.length === 0 ? <p className="pad muted">Aucune action enregistrée pour le moment.</p> : null}
           {log.map(({ m, e, label }) => (
-            <Link key={`${e.id}-${label}`} href={`/matchs/${m.id}`} className="tl" style={{ color: 'inherit' }}>
+            <Link key={`${e.id}-${label}`} href={`/matchs/${m.id}`} className="tl">
               <span className="min">{e.minute}'</span>
               <span style={{ display: 'flex', justifyContent: 'center' }}><EventIcon type={label === 'Passe décisive' ? 'goal' : e.type} /></span>
               <span><b style={{ display: 'block' }}>{label}</b><span className="small muted">{sideName(m, 'home')} – {sideName(m, 'away')} · {matchTitle(m)} · {fmtDay(m.kickoff)}</span></span>

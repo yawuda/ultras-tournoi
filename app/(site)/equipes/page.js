@@ -16,7 +16,7 @@ export default async function Equipes() {
           <h2 className="h2">Groupe {g}</h2>
           <div className="grid-teams">
             {T.teams.filter((t) => t.grp === g).map((t) => (
-              <Link key={t.id} href={`/equipes/${t.id}`} className="card pad stack" style={{ color: 'inherit', alignItems: 'center', textAlign: 'center' }}>
+              <Link key={t.id} href={`/equipes/${t.id}`} className="card pad stack" style={{ alignItems: 'center', textAlign: 'center' }}>
                 <TeamBadge team={t} size={64} />
                 <b>{t.name}</b>
                 <span className="small muted">{T.players.filter((p) => p.team_id === t.id).length} joueurs</span>
@@ -29,7 +29,7 @@ export default async function Equipes() {
         <section className="sec">
           <h2 className="h2">Sans groupe</h2>
           <div className="grid-teams">
-            {others.map((t) => <Link key={t.id} href={`/equipes/${t.id}`} className="card pad row" style={{ color: 'inherit' }}><TeamBadge team={t} size={36} /><b>{t.name}</b></Link>)}
+            {others.map((t) => <Link key={t.id} href={`/equipes/${t.id}`} className="card pad row"><TeamBadge team={t} size={36} /><b>{t.name}</b></Link>)}
           </div>
         </section>
       ) : null}

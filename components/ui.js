@@ -3,12 +3,25 @@ import { liveLabel, sideName, matchTitle, groupStandings } from '@/lib/engine.js
 import { fmtDay, fmtTime, shortName, fullName } from '@/lib/format.js';
 
 export function TeamBadge({ team, size = 36 }) {
-  if (!team) return <span className="badge badge-empty" style={{ width: size, height: size, fontSize: 12 }}>?</span>;
+  const w = Math.round(size * 0.86);
+  if (!team) {
+    return (
+      <svg className="shield" aria-hidden="true" width={w} height={size} viewBox="0 0 24 28">
+        <path d="M12 1l10 4v8c0 7-4.5 11.5-10 14C6.5 24.5 2 20 2 13V5z" fill="#e9edf3" stroke="#b8c2d0" strokeWidth="1" strokeDasharray="2 1.5" />
+        <text x="12" y="17" textAnchor="middle" fontSize="8" fontWeight="700" fill="#5b6676" fontFamily="Inter, sans-serif">?</text>
+      </svg>
+    );
+  }
   if (team.logo_url) return <img className="badge-img" src={team.logo_url} alt="" width={size} height={size} style={{ width: size, height: size }} />;
+  const label = String(team.short || '').slice(0, 4);
   return (
-    <span className="badge" style={{ width: size, height: size, background: team.color || '#2B303A', fontSize: Math.max(9, Math.round(size * 0.3)) }}>
-      {team.short}
-    </span>
+    <svg className="shield" role="img" aria-label={`Écusson ${team.name}`} width={w} height={size} viewBox="0 0 24 28">
+      <path d="M12 1l10 4v8c0 7-4.5 11.5-10 14C6.5 24.5 2 20 2 13V5z" fill={team.color || '#2B303A'} stroke="#ffffff" strokeWidth="0.8" />
+      <path d="M2 11h20" stroke="#ffffff" strokeWidth="1" opacity="0.45" />
+      {size >= 28 ? (
+        <text x="12" y="18" textAnchor="middle" fontSize={label.length > 2 ? 5.5 : 6.5} fontWeight="700" fill="#ffffff" fontFamily="Inter, sans-serif">{label}</text>
+      ) : null}
+    </svg>
   );
 }
 
@@ -50,11 +63,11 @@ export function MatchCard({ m, settings, href }) {
   );
 }
 
-export function StandingsTable({ T, grp, full = true }) {
+export function StandingsTable({ T, grp, full = true, compact = false }) {
   const rows = groupStandings(T, grp);
   const tied = rows.some((r) => r.tied);
   return (
-    <div className="card" style={{ padding: '10px 12px' }}>
+    <div className={compact ? 'card compact' : 'card'} style={compact ? undefined : { padding: '10px 12px' }}>
       <div className="row between" style={{ padding: '2px 2px 4px' }}>
         <h3 className="h2" style={{ fontSize: 21 }}>Groupe {grp}</h3>
       </div>
@@ -64,17 +77,17 @@ export function StandingsTable({ T, grp, full = true }) {
             <tr>
               <th>#</th><th className="l">Équipe</th><th title="Matchs joués">J</th>
               {full ? (<><th title="Victoires">V</th><th title="Nuls">N</th><th title="Défaites">D</th><th title="Buts marqués">BP</th><th title="Buts encaissés">BC</th></>) : null}
-              <th title="Différence de buts">Diff</th><th>Pts</th>
+              <th title="Différence de buts" className="hide-sm">Diff</th><th>Pts</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.team.id}>
                 <td><span className={r.pos <= 2 ? 'pos q' : 'pos'}>{r.pos}</span></td>
-                <td className="l team"><Link href={`/equipes/${r.team.id}`}><TeamBadge team={r.team} size={24} />{r.team.name}{r.tied ? ' *' : ''}</Link></td>
+                <td className="l team"><Link href={`/equipes/${r.team.id}`}><TeamBadge team={r.team} size={compact ? 20 : 26} /><span className="tn">{r.team.name}{r.tied ? ' *' : ''}</span></Link></td>
                 <td>{r.j}</td>
                 {full ? (<><td>{r.v}</td><td>{r.n}</td><td>{r.d}</td><td>{r.bp}</td><td>{r.bc}</td></>) : null}
-                <td>{r.diff > 0 ? `+${r.diff}` : r.diff}</td>
+                <td className="hide-sm">{r.diff > 0 ? `+${r.diff}` : r.diff}</td>
                 <td className="pts">{r.pts}</td>
               </tr>
             ))}

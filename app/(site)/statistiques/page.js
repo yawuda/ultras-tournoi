@@ -15,7 +15,7 @@ function Teams({ rows, value, unit }) {
   if (!rows.length) return <span className="muted">Pas encore de données</span>;
   return (
     <span className="row wrapx">
-      {rows.map((r) => <Link key={r.team.id} href={`/equipes/${r.team.id}`} className="row" style={{ color: 'inherit' }}><TeamBadge team={r.team} size={22} /><b>{r.team.name}</b></Link>)}
+      {rows.map((r) => <Link key={r.team.id} href={`/equipes/${r.team.id}`} className="row"><TeamBadge team={r.team} size={22} /><b>{r.team.name}</b></Link>)}
       <span className="muted">({value(rows[0])} {unit})</span>
     </span>
   );
