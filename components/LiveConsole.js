@@ -226,11 +226,11 @@ export default function LiveConsole({ match: m, home, away, players, events, lin
             </div>
           </div>
           <div className="stack" style={{ gap: 8 }}>
-            <div className="row between"><span className="step-l">3 · {playerLabel}</span><b className="small">{playerId ? `n° ${byId.get(playerId)?.number} · ${short(byId.get(playerId))}` : ''}</b></div>
+            <div className="row between"><span className="step-l">3 · {playerLabel}</span><b className="small">{playerId ? `${byId.get(playerId)?.number != null ? `n° ${byId.get(playerId).number} · ` : ''}${short(byId.get(playerId))}` : ''}</b></div>
             <div className="pgrid">
               {squad.map((p) => (
-                <button key={p.id} className={`pnum${playerId === p.id ? ' on' : ''}${p.starter === undefined && lineup.length ? ' off' : ''}${suspended.includes(p.id) ? ' sus' : ''}`} aria-pressed={playerId === p.id} aria-label={`Numéro ${p.number}, ${p.first_name || ''} ${p.last_name}`} onClick={() => choosePlayer(p.id)}>
-                  <b>{p.number ?? '–'}</b><small>{p.last_name}</small>
+                <button key={p.id} className={`pnum${playerId === p.id ? ' on' : ''}${p.starter === undefined && lineup.length ? ' off' : ''}${suspended.includes(p.id) ? ' sus' : ''}`} aria-pressed={playerId === p.id} aria-label={`${p.number != null ? `Numéro ${p.number}, ` : ''}${p.first_name || ''} ${p.last_name}`} onClick={() => choosePlayer(p.id)}>
+                  {p.number != null ? <><b>{p.number}</b><small>{p.last_name}</small></> : <><b style={{ fontSize: 14, fontFamily: 'inherit', fontWeight: 700, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.last_name}</b><small>{p.first_name || ''}</small></>}
                 </button>
               ))}
             </div>
@@ -241,8 +241,8 @@ export default function LiveConsole({ match: m, home, away, players, events, lin
               <div className="row between"><span className="step-l">4 · Passeur décisif (facultatif)</span><b className="small">{assistId ? short(byId.get(assistId)) : ''}</b></div>
               <div className="pgrid">
                 {squad.filter((p) => p.id !== playerId).map((p) => (
-                  <button key={p.id} className={assistId === p.id ? 'pnum on' : 'pnum'} aria-pressed={assistId === p.id} aria-label={`Passeur numéro ${p.number}`} onClick={() => setAssistId(assistId === p.id ? null : p.id)}>
-                    <b>{p.number ?? '–'}</b><small>{p.last_name}</small>
+                  <button key={p.id} className={assistId === p.id ? 'pnum on' : 'pnum'} aria-pressed={assistId === p.id} aria-label={`Passeur : ${p.first_name || ""} ${p.last_name}`} onClick={() => setAssistId(assistId === p.id ? null : p.id)}>
+                    {p.number != null ? <><b>{p.number}</b><small>{p.last_name}</small></> : <><b style={{ fontSize: 14, fontFamily: 'inherit', fontWeight: 700, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.last_name}</b><small>{p.first_name || ''}</small></>}
                   </button>
                 ))}
               </div>
@@ -253,8 +253,8 @@ export default function LiveConsole({ match: m, home, away, players, events, lin
               <div className="row between"><span className="step-l">4 · Joueur entrant</span><b className="small">{inId ? short(byId.get(inId)) : ''}</b></div>
               <div className="pgrid">
                 {squad.filter((p) => p.id !== playerId).map((p) => (
-                  <button key={p.id} className={inId === p.id ? 'pnum on' : 'pnum'} aria-pressed={inId === p.id} aria-label={`Entrant numéro ${p.number}`} onClick={() => setInId(inId === p.id ? null : p.id)}>
-                    <b>{p.number ?? '–'}</b><small>{p.last_name}</small>
+                  <button key={p.id} className={inId === p.id ? 'pnum on' : 'pnum'} aria-pressed={inId === p.id} aria-label={`Entrant : ${p.first_name || ""} ${p.last_name}`} onClick={() => setInId(inId === p.id ? null : p.id)}>
+                    {p.number != null ? <><b>{p.number}</b><small>{p.last_name}</small></> : <><b style={{ fontSize: 14, fontFamily: 'inherit', fontWeight: 700, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.last_name}</b><small>{p.first_name || ''}</small></>}
                   </button>
                 ))}
               </div>

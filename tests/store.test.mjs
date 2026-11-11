@@ -7,6 +7,7 @@ import * as S from '../lib/store.js';
 import { groupStandings, groupComplete, tournamentStatus, tournamentStats, playerStats, ranking, qualifiedTeams } from '../lib/engine.js';
 
 process.env.DEMO_TODAY = '2026-11-09';
+process.env.SEED_DEMO = '1';
 setAdapter(adapter);
 resetDb();
 let admin, manager, boss;
@@ -200,10 +201,6 @@ test('démo : effacer les résultats fictifs, régénérer', async () => {
   assert.equal(t.players.length, 208);
   assert.equal(tournamentStatus(t), 'upcoming');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.matches[0].kickoff, '2026-11-16T16:00', 'calendrier recalé sur le vrai début');
-  assert.equal(t.matches[1].kickoff, '2026-11-16T17:15');
-  assert.equal(t.matches[10].kickoff, '2026-11-23T16:00', 'pas de match le week-end');
-  assert.equal(t.matchByCode.get('F').kickoff, '2026-12-07T17:15');
   // remplacement par les vraies données
   await S.saveTeam(admin, { id: 1, name: 'FC Réel', short: 'fcr', grp: 'A', coach: 'Coach', color: '#123456' });
   const pid = await S.savePlayer(admin, { team_id: 1, first_name: "N'Golo", last_name: "O'Brien", number: 14, position: 'M' });
@@ -215,4 +212,29 @@ test('démo : effacer les résultats fictifs, régénérer', async () => {
   t = await T();
   assert.equal(t.settings.name, 'Ultras Tournoi 2026');
   assert.deepEqual(t.tiebreakers, ['points', 'fairplay', 'diff', 'goals', 'h2h']);
+});
+
+test('migration : une base en démo passe sur les vraies équipes', async () => {
+  delete process.env.SEED_DEMO;
+  await adapter.exec("UPDATE settings SET value = '1' WHERE key = 'demo'; DELETE FROM settings WHERE key = 'data_version';");
+  S.invalidate();
+  const { exec } = await import('../lib/db.js');
+  // relance l'initialisation comme au démarrage d'une nouvelle instance
+  const mod = await import('../lib/store.js?again');
+  const t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.teams[0].name, 'Sunrise Team');
+  assert.equal(t.settings.demo, '0');
+  assert.equal(t.settings.data_version, '2');
+  assert.equal(t.matches.length, 32);
+  assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
+  assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
+  // régénération du calendrier après changement de groupe
+  await S.saveTeam(admin, { id: 1, name: 'Sunrise Team', short: 'SUN', grp: 'B', color: '#C2410C' });
+  await assert.rejects(() => S.rebuildSchedule(admin), /exactement 4/);
+  await S.saveTeam(admin, { id: 2, name: 'Taste Life', short: 'TL', grp: 'A', color: '#047857' });
+  await S.saveSettings(admin, { slots: 'xx', start_date: '2026-11-16' }).catch((e) => assert.match(e.message, /créneau/));
+  await S.rebuildSchedule(admin);
+  const t2 = await mod.loadTournament({ fresh: true });
+  assert.equal(t2.matchByCode.get('A1').home_id, 2);
+  assert.equal(t2.matches.length, 32);
 });

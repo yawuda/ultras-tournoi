@@ -1,6 +1,6 @@
 import { loadT } from '@/lib/page.js';
 import { PHASE_LABELS, GROUPS } from '@/lib/engine.js';
-import { fmtDayLong } from '@/lib/format.js';
+import { fmtDayLong, slotsByDay } from '@/lib/format.js';
 import { MatchCard } from '@/components/ui.js';
 
 export const metadata = { title: 'Calendrier des matchs', description: 'Tous les matchs du tournoi : dates, heures, scores et résultats en direct.' };
@@ -22,6 +22,16 @@ export default async function Matchs({ searchParams }) {
   return (
     <div className="wrap">
       <h1 className="h1">Matchs</h1>
+      {T.settings.slots ? (
+        <div className="card pad" style={{ marginBottom: 14 }}>
+          <b className="step-l">Créneaux de la semaine</b>
+          <div className="slots">
+            {slotsByDay(T.settings.slots).map((r) => (
+              <div key={r.day} className="slot"><span>{r.day}</span><b>{r.times.map((x) => x.replace(':', 'h')).join(' · ')}</b></div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <form className="filters" method="get">
         <select name="phase" defaultValue={f.phase} aria-label="Phase">
           <option value="">Toutes les phases</option>

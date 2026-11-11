@@ -123,3 +123,34 @@ test('démo : commencée depuis une semaine', () => {
   assert.deepEqual(demoTiming('2026-11-14'), { startDate: '2026-11-02', playedMatches: 20 });
   assert.deepEqual(demoTiming('2026-11-16'), { startDate: '2026-11-09', playedMatches: 10 });
 });
+
+test('vraies équipes : groupes et calendrier sur les créneaux', async () => {
+  const { buildReal, slotKickoffs } = await import('../lib/realdata.js');
+  const { textToSlots, slotsToText } = await import('../lib/format.js');
+  const d = buildReal();
+  assert.equal(d.teams.length, 16);
+  assert.equal(d.teams.filter((t) => d.players.some((p) => p.team_id === t.id)).length, 9);
+  for (const g of 'ABCD') assert.equal(d.teams.filter((t) => t.grp === g).length, 4);
+  assert.equal(d.matches.length, 32);
+  assert.equal(d.matches[0].kickoff, '2026-11-16T20:00');
+  assert.equal(d.matchesByCode, undefined);
+  const wds = new Set(d.matches.map((m) => new Date(m.kickoff.slice(0, 10) + 'T00:00:00Z').getUTCDay()));
+  assert.deepEqual([...wds].sort(), [1, 2, 3, 6]);
+  // 5 matchs par semaine
+  assert.equal(slotKickoffs('2026-11-16', d.settings.slots, 10).filter((k) => k < '2026-11-23').length, 5);
+  // chaque équipe : 3 matchs de groupe contre 3 adversaires, jamais deux fois le même jour
+  for (const t of d.teams) {
+    const ms = d.matches.filter((m) => m.phase === 'group' && (m.home_id === t.id || m.away_id === t.id));
+    assert.equal(ms.length, 3);
+    assert.equal(new Set(ms.map((m) => m.kickoff.slice(0, 10))).size, 3);
+  }
+  // première semaine : uniquement des équipes confirmées sauf une place
+  const confirmed = new Set(d.players.map((p) => p.team_id));
+  const week1 = d.matches.slice(0, 5);
+  assert.ok(week1.filter((m) => confirmed.has(m.home_id) && confirmed.has(m.away_id)).length >= 4);
+  assert.equal(textToSlots('lun 20h, lun 22:00, mardi 20h00, mer 22:00, sam 22h'), '1-20:00,1-22:00,2-20:00,3-22:00,6-22:00');
+  assert.equal(slotsToText('1-20:00,6-22:00'), 'lun 20:00, sam 22:00');
+  const est = d.teams.find((t) => t.short === 'EST');
+  assert.equal(d.players.filter((p) => p.team_id === est.id).length, 13);
+  assert.ok(d.players.some((p) => p.last_name === 'Eritier' && p.position === 'G'));
+});

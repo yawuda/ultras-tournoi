@@ -3,6 +3,7 @@ import { redirect, unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import * as S from '@/lib/store.js';
 import { getUser, setSession, clearSession } from '@/lib/session.js';
+import { textToSlots } from '@/lib/format.js';
 
 function errMsg(e) {
   if (e instanceof S.AppError) return e.message;
@@ -231,6 +232,7 @@ export async function settingsAction(fd) {
     const u = await me();
     const d = obj(fd);
     d.tiebreakers = fd.getAll('tb').filter(Boolean).join(',');
+    if (d.slots_text !== undefined) d.slots = textToSlots(d.slots_text);
     d.manual_order = JSON.stringify({ A: d.mo_A || '', B: d.mo_B || '', C: d.mo_C || '', D: d.mo_D || '' });
     const banner = await upload(fd.get('banner'), 'banniere');
     if (banner) d.banner_url = banner;
@@ -259,6 +261,15 @@ export async function clearDemoAction() {
 export async function regenerateDemoAction() {
   try {
     await S.regenerateDemo(await me());
+    refresh();
+  } catch (e) {
+    back('/admin/parametres', e);
+  }
+  back('/admin/parametres');
+}
+export async function rebuildScheduleAction() {
+  try {
+    await S.rebuildSchedule(await me());
     refresh();
   } catch (e) {
     back('/admin/parametres', e);
