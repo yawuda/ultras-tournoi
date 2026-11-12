@@ -224,7 +224,7 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '3');
+  assert.equal(t.settings.data_version, '4');
   assert.equal(t.matches.length, 32);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
@@ -274,4 +274,25 @@ test('v3 : Aigle et Z Team remplacent les places vides, capitaines', async () =>
   await exec(v3Script());
   t = await S.loadTournament({ fresh: true });
   assert.equal(t.players.filter((p) => p.team_id === 10).length, 13, 'pas de doublon');
+});
+
+test('v4 : capitaines de toutes les équipes, effectif EST', async () => {
+  await adapter.exec("UPDATE settings SET value = '3' WHERE key = 'data_version'; UPDATE players SET is_captain = FALSE;");
+  await adapter.exec("INSERT INTO players (team_id, last_name) SELECT id, 'Dida' FROM teams WHERE short = 'EST' AND NOT EXISTS (SELECT 1 FROM players p WHERE p.last_name = 'Dida'); DELETE FROM players WHERE last_name = 'Derouich';");
+  const { exec } = await import('../lib/db.js');
+  const { v4Script } = await import('../lib/seed.js');
+  await exec(v4Script());
+  await exec(v4Script());
+  S.invalidate();
+  const t = await S.loadTournament({ fresh: true });
+  const caps = Object.fromEntries(t.players.filter((p) => p.is_captain).map((p) => [t.teamById.get(p.team_id).short, `${p.first_name || ''} ${p.last_name}`.trim()]));
+  assert.deepEqual(caps, { SUN: 'Mahdi Al Shab', TL: 'Abo Hamoud', SG: 'Yahye (Yaaya)', GMK: 'Mahdi Akkash', LC: 'Ali Bourgi', PAN: 'Michael', SMC: 'Mohamed Hamam', NSA: 'Ali Farhat', EST: 'Seifedine Hedhli', AIG: 'Abdalah Ach', ZT: 'Hussein' });
+  const est = t.teams.find((x) => x.short === 'EST');
+  const squad = t.players.filter((p) => p.team_id === est.id);
+  assert.equal(squad.length, 13);
+  assert.ok(!squad.some((p) => p.last_name === 'Dida'));
+  assert.equal(squad.filter((p) => p.last_name === 'Derouich').length, 1);
+  assert.equal(squad.find((p) => p.last_name === 'Sayed Fathy').position, 'G');
+  assert.equal(squad[0].last_name, 'Hedhli', 'capitaine en tête');
+  assert.equal(t.settings.data_version, '4');
 });

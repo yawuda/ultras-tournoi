@@ -153,4 +153,5 @@ test('vraies équipes : groupes et calendrier sur les créneaux', async () => {
   const est = d.teams.find((t) => t.short === 'EST');
   assert.equal(d.players.filter((p) => p.team_id === est.id).length, 13);
   assert.ok(d.players.some((p) => p.last_name === 'Eritier' && p.position === 'G'));
+  for (const tm of d.teams.filter((x) => d.players.some((p) => p.team_id === x.id))) assert.equal(d.players.filter((p) => p.team_id === tm.id && p.is_captain).length, 1, tm.name);
 });
