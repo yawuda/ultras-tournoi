@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/session.js';
 import { loadFresh } from '@/lib/page.js';
 import { POSITION_LABELS } from '@/lib/engine.js';
-import { fullName } from '@/lib/format.js';
+import { rosterName } from '@/lib/format.js';
 import { Flash, TeamBadge, Avatar } from '@/components/ui.js';
 import TeamForm from '@/components/TeamForm.js';
 import PlayerForm from '@/components/PlayerForm.js';
@@ -34,7 +34,7 @@ export default async function AdminTeam({ params, searchParams }) {
             <details key={p.id} className="card">
               <summary className="row" style={{ display: 'flex' }}>
                 <Avatar player={p} size={32} />
-                <span><b>{p.number}</b> · {fullName(p)} <span className="muted small">· {POSITION_LABELS[p.position]}</span></span>
+                <span>{p.number != null ? <><b>{p.number}</b> · </> : null}<b>{rosterName(p)}</b>{p.position ? <span className="muted small"> · {POSITION_LABELS[p.position]}</span> : null}</span>
               </summary>
               <div className="pad stack">
                 <PlayerForm player={p} teams={T.teams} back={back} />

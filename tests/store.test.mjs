@@ -224,7 +224,7 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '2');
+  assert.equal(t.settings.data_version, '3');
   assert.equal(t.matches.length, 32);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
@@ -237,4 +237,41 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t2 = await mod.loadTournament({ fresh: true });
   assert.equal(t2.matchByCode.get('A1').home_id, 2);
   assert.equal(t2.matches.length, 32);
+});
+
+test('v3 : Aigle et Z Team remplacent les places vides, capitaines', async () => {
+  // base en v2 : « Équipe 10 » et « Équipe 11 » vides
+  await adapter.exec("UPDATE settings SET value = '2' WHERE key = 'data_version'; UPDATE teams SET name = 'Équipe 10', short = 'E10' WHERE id = 10; UPDATE teams SET name = 'Équipe 11', short = 'E11' WHERE id = 11; DELETE FROM players WHERE team_id IN (10, 11); UPDATE players SET is_captain = FALSE;");
+  const { exec } = await import('../lib/db.js');
+  const { v3Script } = await import('../lib/seed.js');
+  await exec(v3Script());
+  await exec(v3Script()); // idempotent
+  S.invalidate();
+  let t = await S.loadTournament({ fresh: true });
+  const aigle = t.teamById.get(10);
+  const z = t.teamById.get(11);
+  assert.equal(aigle.name, 'Aigle');
+  assert.equal(z.name, 'Z Team');
+  assert.equal(t.players.filter((p) => p.team_id === 10).length, 13);
+  assert.equal(t.players.filter((p) => p.team_id === 11).length, 11);
+  assert.ok(t.players.some((p) => p.team_id === 11 && p.last_name === 'Matta' && p.position === 'G'));
+  const gmk = t.teams.find((x) => x.short === 'GMK');
+  const firstGmk = t.players.find((p) => p.team_id === gmk.id);
+  assert.equal(firstGmk.last_name, 'Akkash');
+  assert.ok(firstGmk.is_captain, 'capitaine en premier dans la liste');
+  assert.equal(t.settings.data_version, '3');
+  // un seul capitaine par équipe
+  const zp = t.players.filter((p) => p.team_id === 11);
+  await S.savePlayer(admin, { ...zp[3], is_captain: '1' });
+  await S.savePlayer(admin, { ...zp[5], is_captain: '1' });
+  t = await S.loadTournament({ fresh: true });
+  const caps = t.players.filter((p) => p.team_id === 11 && p.is_captain);
+  assert.equal(caps.length, 1);
+  assert.equal(caps[0].id, zp[5].id);
+  assert.equal(t.players.find((p) => p.team_id === 11).id, zp[5].id);
+  // une équipe déjà modifiée par l'organisateur n'est pas écrasée
+  await adapter.exec("UPDATE settings SET value = '2' WHERE key = 'data_version'; UPDATE teams SET name = 'Équipe 10' WHERE id = 10;");
+  await exec(v3Script());
+  t = await S.loadTournament({ fresh: true });
+  assert.equal(t.players.filter((p) => p.team_id === 10).length, 13, 'pas de doublon');
 });

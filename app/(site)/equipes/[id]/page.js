@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { loadT } from '@/lib/page.js';
 import { groupStandings, teamRecord, playerStats, suspensions, POSITION_LABELS } from '@/lib/engine.js';
-import { fullName } from '@/lib/format.js';
+import { rosterName } from '@/lib/format.js';
 import { TeamBadge, MatchCard, Avatar } from '@/components/ui.js';
 
 export async function generateMetadata({ params }) {
@@ -57,7 +57,7 @@ export default async function TeamPage({ params }) {
                 return (
                   <tr key={p.id}>
                     <td><b>{p.number}</b></td>
-                    <td className="l team"><Link href={`/joueurs/${p.id}`}><Avatar player={p} size={30} />{fullName(p)}{out.has(p.id) ? <span className="chip" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Suspendu</span> : null}</Link></td>
+                    <td className="l team"><Link href={`/joueurs/${p.id}`}><Avatar player={p} size={30} />{rosterName(p)}{out.has(p.id) ? <span className="chip" style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Suspendu</span> : null}</Link></td>
                     <td className="l">{POSITION_LABELS[p.position] || ''}</td>
                     <td>{s.mj}</td><td>{s.goals}</td><td>{s.assists}</td><td>{s.yellow}</td><td>{s.red}</td>
                   </tr>

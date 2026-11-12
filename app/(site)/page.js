@@ -94,7 +94,7 @@ export default async function Home() {
                         <Avatar player={x.player} size={60} />
                         <span><span className="bignum" style={{ display: 'block' }}>{x.value}</span><span className="small muted">buts</span></span>
                       </span>
-                      <span className="small muted">{x.team?.name} · n° {x.player.number}</span>
+                      <span className="small muted">{x.team?.name}{x.player.number != null ? ` · n° ${x.player.number}` : ""}</span>
                     </Link>
                   ))}
                 </div>

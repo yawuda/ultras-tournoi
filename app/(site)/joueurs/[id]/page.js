@@ -33,7 +33,7 @@ export default async function PlayerPage({ params }) {
         <div>
           <h1 className="h1" style={{ margin: 0 }}>{fullName(p)}</h1>
           <p className="muted row wrapx">
-            <span>N° {p.number} · {POSITION_LABELS[p.position] || ''}</span>
+            <span>{[p.number != null ? `N° ${p.number}` : null, POSITION_LABELS[p.position], p.is_captain ? 'Capitaine' : null].filter(Boolean).join(' · ')}</span>
             {team ? <Link href={`/equipes/${team.id}`} className="row"><TeamBadge team={team} size={22} />{team.name}</Link> : null}
           </p>
         </div>

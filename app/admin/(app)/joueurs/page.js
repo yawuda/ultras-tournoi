@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/session.js';
 import { loadFresh } from '@/lib/page.js';
 import { POSITION_LABELS } from '@/lib/engine.js';
-import { fullName } from '@/lib/format.js';
+import { rosterName } from '@/lib/format.js';
 import { Flash, Avatar } from '@/components/ui.js';
 import PlayerForm from '@/components/PlayerForm.js';
 
@@ -35,7 +35,7 @@ export default async function AdminPlayers({ searchParams }) {
               {list.map((p) => (
                 <tr key={p.id}>
                   <td><b>{p.number}</b></td>
-                  <td className="l team"><span className="row"><Avatar player={p} size={28} />{fullName(p)}</span></td>
+                  <td className="l team"><span className="row"><Avatar player={p} size={28} />{rosterName(p)}</span></td>
                   <td className="l">{T.teamById.get(p.team_id)?.name}</td>
                   <td className="l">{POSITION_LABELS[p.position]}</td>
                   <td><Link className="btn sm" href={`/admin/equipes/${p.team_id}`}>Modifier</Link></td>

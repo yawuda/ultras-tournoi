@@ -129,7 +129,7 @@ test('vraies équipes : groupes et calendrier sur les créneaux', async () => {
   const { textToSlots, slotsToText } = await import('../lib/format.js');
   const d = buildReal();
   assert.equal(d.teams.length, 16);
-  assert.equal(d.teams.filter((t) => d.players.some((p) => p.team_id === t.id)).length, 9);
+  assert.equal(d.teams.filter((t) => d.players.some((p) => p.team_id === t.id)).length, 11);
   for (const g of 'ABCD') assert.equal(d.teams.filter((t) => t.grp === g).length, 4);
   assert.equal(d.matches.length, 32);
   assert.equal(d.matches[0].kickoff, '2026-11-16T20:00');

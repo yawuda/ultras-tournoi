@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { loadT } from '@/lib/page.js';
 import { playerStats, POSITION_LABELS } from '@/lib/engine.js';
-import { fullName } from '@/lib/format.js';
+import { fullName, rosterName } from '@/lib/format.js';
 import { Avatar } from '@/components/ui.js';
 
 export const metadata = { title: 'Joueurs', description: 'Tous les joueurs inscrits au tournoi et leurs statistiques.' };
@@ -38,7 +38,7 @@ export default async function Joueurs({ searchParams }) {
               const s = stats.get(p.id);
               return (
                 <tr key={p.id}>
-                  <td className="l team"><Link href={`/joueurs/${p.id}`}><Avatar player={p} size={30} />{fullName(p)}</Link></td>
+                  <td className="l team"><Link href={`/joueurs/${p.id}`}><Avatar player={p} size={30} />{rosterName(p)}</Link></td>
                   <td><b>{p.number}</b></td>
                   <td className="l">{T.teamById.get(p.team_id)?.name}</td>
                   <td className="l">{POSITION_LABELS[p.position] || ''}</td>

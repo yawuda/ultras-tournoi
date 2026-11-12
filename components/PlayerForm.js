@@ -19,6 +19,7 @@ export default function PlayerForm({ player, teams, teamId, back }) {
           {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </label>
+      <label className="f" style={{ flexDirection: 'row', alignItems: 'center', minHeight: 46 }}><input type="checkbox" name="is_captain" value="1" defaultChecked={!!player?.is_captain} style={{ width: 20, height: 20 }} />Capitaine de l'équipe</label>
       <label className="f">Photo<input type="file" name="photo" accept="image/png,image/jpeg,image/webp" /></label>
       {player?.photo_url ? <label className="f" style={{ flexDirection: 'row', alignItems: 'center' }}><input type="checkbox" name="remove_photo" value="1" style={{ width: 20, height: 20 }} />Retirer la photo</label> : null}
       <button className="btn primary" type="submit">{player ? 'Enregistrer' : 'Ajouter le joueur'}</button>
