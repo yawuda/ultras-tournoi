@@ -224,7 +224,7 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '4');
+  assert.equal(t.settings.data_version, '5');
   assert.equal(t.matches.length, 32);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
@@ -295,4 +295,22 @@ test('v4 : capitaines de toutes les équipes, effectif EST', async () => {
   assert.equal(squad.find((p) => p.last_name === 'Sayed Fathy').position, 'G');
   assert.equal(squad[0].last_name, 'Hedhli', 'capitaine en tête');
   assert.equal(t.settings.data_version, '4');
+});
+
+test('v5 : Bokutani remplace Équipe 12', async () => {
+  await adapter.exec("UPDATE settings SET value = '4' WHERE key = 'data_version'; DELETE FROM players WHERE team_id = 12; UPDATE teams SET name = 'Équipe 12', short = 'E12' WHERE id = 12;");
+  const { exec } = await import('../lib/db.js');
+  const { v5Script } = await import('../lib/seed.js');
+  await exec(v5Script());
+  await exec(v5Script());
+  S.invalidate();
+  const t = await S.loadTournament({ fresh: true });
+  const b = t.teamById.get(12);
+  assert.equal(b.name, 'Bokutani');
+  assert.equal(b.grp, 'D');
+  const squad = t.players.filter((p) => p.team_id === 12);
+  assert.equal(squad.length, 14);
+  assert.equal(squad[0].last_name, 'Big');
+  assert.ok(squad[0].is_captain);
+  assert.equal(squad.filter((p) => p.is_captain).length, 1);
 });
