@@ -12,7 +12,7 @@ function Row({ m, T }) {
   else if (m.status === 'finished') state = m.validated ? <span className="chip ok">Validé</span> : <span className="chip warn">À valider</span>;
   return (
     <Link href={`/admin/matchs/${m.id}`} className="card match">
-      <div className="match-top"><span>{matchTitle(m)} · {fmtDay(m.kickoff)} {fmtTime(m.kickoff)}</span>{state}</div>
+      <div className="match-top"><span>M{m.num} · {matchTitle(m)} · {fmtDay(m.kickoff)} {fmtTime(m.kickoff)}</span>{state}</div>
       <div className="match-main">
         <div className="side right"><span className="n">{sideName(m, 'home')}</span><TeamBadge team={m.home} size={30} /></div>
         <div className="mid">{m.status === 'scheduled' ? <span className="time">{fmtTime(m.kickoff)}</span> : <span className="score">{m.hs} – {m.as}</span>}</div>

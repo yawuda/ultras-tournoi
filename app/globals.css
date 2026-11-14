@@ -244,3 +244,9 @@ body:has(.site) { background: #0b0d11; }
 .slot span { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
 .slot b { font-family: var(--disp); font-size: 22px; color: var(--blue-d); }
 .site .filters select, .site .filters input, .site .in, .site select, .site input { color: var(--text); }
+
+.pos.q3 { border: 2px solid var(--blue); color: var(--blue); }
+.legend i.q3 { background: transparent; border: 2px solid var(--blue); }
+@media (min-width: 900px) { .groups4.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 899px) { .groups4.g3 > :first-child { grid-column: 1 / -1; } }
+.site .card.muted { color: var(--muted); }

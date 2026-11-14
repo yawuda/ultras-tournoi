@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { liveLabel, sideName, matchTitle, groupStandings } from '@/lib/engine.js';
+import { liveLabel, sideName, matchTitle, groupStandings, thirdsRanking, bestThirdsCount } from '@/lib/engine.js';
 import { fmtDay, fmtTime, shortName, fullName } from '@/lib/format.js';
 
 export function TeamBadge({ team, size = 36 }) {
@@ -51,7 +51,7 @@ export function MatchCard({ m, settings, href }) {
   return (
     <Link href={href || `/matchs/${m.id}`} className="card match">
       <div className="match-top">
-        <span>{matchTitle(m)} · {fmtDay(m.kickoff)} {fmtTime(m.kickoff)}{m.venue ? ` · ${m.venue}` : ''}</span>
+        <span>M{m.num} · {matchTitle(m)} · {fmtDay(m.kickoff)} {fmtTime(m.kickoff)}{m.venue ? ` · ${m.venue}` : ''}</span>
         <StatusChip m={m} settings={settings} />
       </div>
       <div className="match-main">
@@ -66,6 +66,8 @@ export function MatchCard({ m, settings, href }) {
 export function StandingsTable({ T, grp, full = true, compact = false }) {
   const rows = groupStandings(T, grp);
   const tied = rows.some((r) => r.tied);
+  const nThirds = bestThirdsCount(T);
+  const goodThirds = new Set(nThirds ? thirdsRanking(T).slice(0, nThirds).map((r) => r.team.id) : []);
   return (
     <div className={compact ? 'card compact' : 'card'} style={compact ? undefined : { padding: '10px 12px' }}>
       <div className="row between" style={{ padding: '2px 2px 4px' }}>
@@ -83,7 +85,7 @@ export function StandingsTable({ T, grp, full = true, compact = false }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.team.id}>
-                <td><span className={r.pos <= 2 ? 'pos q' : 'pos'}>{r.pos}</span></td>
+                <td><span className={r.pos <= 2 ? 'pos q' : r.pos === 3 && goodThirds.has(r.team.id) ? 'pos q3' : 'pos'}>{r.pos}</span></td>
                 <td className="l team"><Link href={`/equipes/${r.team.id}`}><TeamBadge team={r.team} size={compact ? 20 : 26} /><span className="tn">{r.team.name}{r.tied ? ' *' : ''}</span></Link></td>
                 <td>{r.j}</td>
                 {full ? (<><td>{r.v}</td><td>{r.n}</td><td>{r.d}</td><td>{r.bp}</td><td>{r.bc}</td></>) : null}

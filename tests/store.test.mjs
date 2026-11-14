@@ -224,19 +224,18 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '5');
-  assert.equal(t.matches.length, 32);
+  assert.equal(t.settings.data_version, '6');
+  assert.equal(t.matches.length, 31);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
   // régénération du calendrier après changement de groupe
+  await S.saveTeam(admin, { id: 1, name: 'Sunrise Team', short: 'SUN', grp: 'D', color: '#C2410C' });
+  await assert.rejects(() => S.rebuildSchedule(admin), /au moins 3/);
   await S.saveTeam(admin, { id: 1, name: 'Sunrise Team', short: 'SUN', grp: 'B', color: '#C2410C' });
-  await assert.rejects(() => S.rebuildSchedule(admin), /exactement 4/);
-  await S.saveTeam(admin, { id: 2, name: 'Taste Life', short: 'TL', grp: 'A', color: '#047857' });
   await S.saveSettings(admin, { slots: 'xx', start_date: '2026-11-16' }).catch((e) => assert.match(e.message, /créneau/));
   await S.rebuildSchedule(admin);
   const t2 = await mod.loadTournament({ fresh: true });
-  assert.equal(t2.matchByCode.get('A1').home_id, 2);
-  assert.equal(t2.matches.length, 32);
+  assert.equal(t2.matches.length, 31);
 });
 
 test('v3 : Aigle et Z Team remplacent les places vides, capitaines', async () => {
@@ -307,10 +306,95 @@ test('v5 : Bokutani remplace Équipe 12', async () => {
   const t = await S.loadTournament({ fresh: true });
   const b = t.teamById.get(12);
   assert.equal(b.name, 'Bokutani');
-  assert.equal(b.grp, 'D');
   const squad = t.players.filter((p) => p.team_id === 12);
   assert.equal(squad.length, 14);
   assert.equal(squad[0].last_name, 'Big');
   assert.ok(squad[0].is_captain);
   assert.equal(squad.filter((p) => p.is_captain).length, 1);
+});
+
+test('v6 : passage à 3 groupes depuis la v5 (places vides, Tequila)', async () => {
+  // état « v5 » : 16 équipes dont 4 places vides, 4 groupes, pas de Tequila
+  await adapter.exec(`UPDATE settings SET value = '5' WHERE key = 'data_version';
+    DELETE FROM teams WHERE short = 'TEQ';
+    UPDATE teams SET name = 'Aigle' WHERE short = 'AIG';
+    INSERT INTO teams (name, short, grp, color) VALUES ('Équipe 13', 'E13', 'A', '#555'), ('Équipe 14', 'E14', 'B', '#555'), ('Équipe 15', 'E15', 'C', '#555'), ('Équipe 16', 'E16', 'D', '#555');
+    UPDATE teams SET grp = 'D' WHERE short IN ('GMK', 'NSA', 'BOK');`);
+  const mod = await import('../lib/store.js?v6');
+  let t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.settings.data_version, '6');
+  assert.equal(t.teams.length, 13);
+  assert.ok(!t.teams.some((x) => x.name.startsWith('Équipe ')));
+  const g = (k) => t.teams.filter((x) => x.grp === k).map((x) => x.short).sort().join(',');
+  assert.equal(g('A'), 'EST,NSA,PAN,SG,TEQ');
+  assert.equal(g('B'), 'GMK,SMC,SUN,TL');
+  assert.equal(g('C'), 'AIG,BOK,LC,ZT');
+  assert.equal(g('D'), '');
+  assert.equal(t.players.filter((p) => p.team_id === t.teams.find((x) => x.short === 'TEQ').id).length, 14);
+  assert.equal(t.matches.length, 31);
+  // migration rejouée : rien ne bouge
+  await adapter.exec("UPDATE settings SET value = '5' WHERE key = 'data_version';");
+  const mod2 = await import('../lib/store.js?v6b');
+  t = await mod2.loadTournament({ fresh: true });
+  assert.equal(t.teams.length, 13);
+  assert.equal(t.players.filter((p) => p.team_id === t.teams.find((x) => x.short === 'TEQ').id).length, 14);
+});
+
+test('format à 3 groupes : tournoi complet jusqu\'à la finale', async () => {
+  const E = await import('../lib/engine.js');
+  let t = await S.loadTournament({ fresh: true });
+  const strength = (id) => (id * 7) % 11; // force arbitraire et fixe
+  for (const m of t.matches.filter((x) => x.phase === 'group')) {
+    const hs = Math.max(0, Math.round(strength(m.home_id) / 3) - (m.id % 2));
+    const as = Math.max(0, Math.round(strength(m.away_id) / 3) - ((m.id + 1) % 2));
+    await S.startMatch(admin, m.id);
+    for (let i = 0; i < hs; i++) await S.addEvent(admin, { match_id: m.id, team_id: m.home_id, type: 'goal', minute: 10 + i });
+    for (let i = 0; i < as; i++) await S.addEvent(admin, { match_id: m.id, team_id: m.away_id, type: 'goal', minute: 30 + i });
+    await S.finishMatch(admin, m.id);
+    await S.validateMatch(admin, m.id);
+  }
+  t = await S.loadTournament({ fresh: true });
+  assert.ok(E.allGroupsComplete(t));
+  const st = Object.fromEntries(['A', 'B', 'C'].map((k) => [k, E.groupStandings(t, k)]));
+  const thirds = E.thirdsRanking(t);
+  assert.equal(thirds.length, 3);
+  const q = (c) => t.matchByCode.get(c);
+  assert.deepEqual([q('QF1').home_id, q('QF1').away_id], [st.A[0].team.id, thirds[0].team.id]);
+  assert.deepEqual([q('QF2').home_id, q('QF2').away_id], [st.B[0].team.id, st.C[1].team.id]);
+  assert.deepEqual([q('QF3').home_id, q('QF3').away_id], [st.C[0].team.id, st.B[1].team.id]);
+  assert.deepEqual([q('QF4').home_id, q('QF4').away_id], [st.A[1].team.id, thirds[1].team.id]);
+  assert.equal(E.qualifiedTeams(t).length, 8);
+  // quarts : à domicile gagne, sauf QF2 aux tirs au but
+  for (const c of ['QF1', 'QF3', 'QF4']) {
+    const m = q(c);
+    await S.startMatch(admin, m.id);
+    await S.addEvent(admin, { match_id: m.id, team_id: m.home_id, type: 'goal', minute: 5 });
+    await S.finishMatch(admin, m.id);
+    await S.validateMatch(admin, m.id);
+  }
+  t = await S.loadTournament({ fresh: true });
+  assert.equal(q('5P').home_id, null, '5e place : attend la fin de tous les quarts');
+  const m2 = t.matchByCode.get('QF2');
+  await S.startMatch(admin, m2.id);
+  for (const p of ['HT', '2H', 'FT', 'ET1', 'ETB', 'ET2', 'PEN']) await S.setPeriod(admin, m2.id, p);
+  await S.setPens(admin, m2.id, 2, 4);
+  await S.finishMatch(admin, m2.id);
+  await S.validateMatch(admin, m2.id);
+  t = await S.loadTournament({ fresh: true });
+  const losers = E.quarterLosersRanking(t);
+  assert.equal(losers.length, 4);
+  assert.deepEqual([t.matchByCode.get('5P').home_id, t.matchByCode.get('5P').away_id], [losers[0].team.id, losers[1].team.id]);
+  assert.deepEqual([t.matchByCode.get('DF1').home_id, t.matchByCode.get('DF1').away_id], [t.matchByCode.get('QF1').home_id, t.matchByCode.get('QF2').away_id]);
+  assert.deepEqual([t.matchByCode.get('DF2').home_id, t.matchByCode.get('DF2').away_id], [t.matchByCode.get('QF3').home_id, t.matchByCode.get('QF4').home_id]);
+  for (const c of ['DF1', 'DF2', '5P', '3P', 'F']) {
+    const m = (await S.loadTournament({ fresh: true })).matchByCode.get(c);
+    assert.ok(m.home_id && m.away_id, `${c} : équipes connues`);
+    await S.startMatch(admin, m.id);
+    await S.addEvent(admin, { match_id: m.id, team_id: m.away_id, type: 'goal', minute: 5 });
+    await S.finishMatch(admin, m.id);
+    await S.validateMatch(admin, m.id);
+  }
+  t = await S.loadTournament({ fresh: true });
+  assert.equal(E.tournamentStatus(t), 'finished');
+  assert.equal(t.matchByCode.get('F').winner_id, t.matchByCode.get('DF2').winner_id);
 });

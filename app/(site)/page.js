@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { loadT } from '@/lib/page.js';
-import { GROUPS, tournamentStats, qualifiedTeams, playerStats, ranking } from '@/lib/engine.js';
+import { groupsOf, bestThirdsCount, tournamentStats, qualifiedTeams, playerStats, ranking } from '@/lib/engine.js';
 import { fmtDay, fullName, fr } from '@/lib/format.js';
 import { MatchCard, StandingsTable, TeamBadge, Avatar, RankList } from '@/components/ui.js';
 
@@ -34,10 +34,13 @@ export default async function Home() {
             <h2 className="h2">Classements</h2>
             <Link href="/classements">Détail et phase finale</Link>
           </div>
-          <div className="groups4">
-            {GROUPS.map((g) => <StandingsTable key={g} T={T} grp={g} full={false} compact />)}
+          <div className={groupsOf(T).length === 3 ? 'groups4 g3' : 'groups4'}>
+            {groupsOf(T).map((g) => <StandingsTable key={g} T={T} grp={g} full={false} compact />)}
           </div>
-          <div className="legend"><span><i />Les 2 premiers de chaque groupe sont qualifiés pour les quarts de finale</span></div>
+          <div className="legend">
+            <span><i />Les 2 premiers de chaque groupe sont qualifiés pour les quarts de finale</span>
+            {bestThirdsCount(T) ? <span><i className="q3" />Les {bestThirdsCount(T)} meilleurs 3es aussi (provisoire tant que les groupes ne sont pas terminés)</span> : null}
+          </div>
         </section>
 
         <div className="home-cols">

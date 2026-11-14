@@ -63,7 +63,7 @@ export default async function MatchPage({ params }) {
             <Link href="/matchs" style={{ fontWeight: 600, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>‹ Tous les matchs</Link>
             <StatusChip m={m} settings={T.settings} />
           </div>
-          <p style={{ textAlign: 'center', color: '#d5dae3' }}>{matchTitle(m)}</p>
+          <p style={{ textAlign: 'center', color: '#d5dae3' }}>Match {m.num} · {matchTitle(m)}</p>
           <div className="match-main">
             <div className="side" style={{ flexDirection: 'column', textAlign: 'center' }}>
               <TeamBadge team={m.home} size={68} />

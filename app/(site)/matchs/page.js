@@ -1,5 +1,5 @@
 import { loadT } from '@/lib/page.js';
-import { PHASE_LABELS, GROUPS } from '@/lib/engine.js';
+import { PHASE_LABELS, groupsOf } from '@/lib/engine.js';
 import { fmtDayLong, slotsByDay } from '@/lib/format.js';
 import { MatchCard } from '@/components/ui.js';
 
@@ -39,7 +39,7 @@ export default async function Matchs({ searchParams }) {
         </select>
         <select name="groupe" defaultValue={f.grp} aria-label="Groupe">
           <option value="">Tous les groupes</option>
-          {GROUPS.map((g) => <option key={g} value={g}>Groupe {g}</option>)}
+          {groupsOf(T).map((g) => <option key={g} value={g}>Groupe {g}</option>)}
         </select>
         <select name="statut" defaultValue={f.statut} aria-label="Statut">
           <option value="">Tous les statuts</option>

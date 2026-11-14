@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { loadT } from '@/lib/page.js';
-import { GROUPS } from '@/lib/engine.js';
+import { groupsOf } from '@/lib/engine.js';
 import { TeamBadge } from '@/components/ui.js';
 
 export const metadata = { title: 'Équipes', description: 'Les 16 équipes du tournoi, leurs effectifs et leurs résultats.' };
 
 export default async function Equipes() {
   const T = await loadT();
+  const GROUPS = groupsOf(T);
   const others = T.teams.filter((t) => !GROUPS.includes(t.grp));
   return (
     <div className="wrap">

@@ -24,7 +24,7 @@ export default async function AdminMatches({ searchParams }) {
             {T.matches.map((m) => (
               <tr key={m.id}>
                 <td className="l" style={{ whiteSpace: 'nowrap' }}>{fmtDay(m.kickoff)} {fmtTime(m.kickoff)}</td>
-                <td className="l team"><Link href={`/admin/matchs/${m.id}`}>{sideName(m, 'home')} – {sideName(m, 'away')}</Link><span className="small muted">{matchTitle(m)}</span></td>
+                <td className="l team"><Link href={`/admin/matchs/${m.id}`}>{sideName(m, 'home')} – {sideName(m, 'away')}</Link><span className="small muted">M{m.num} · {matchTitle(m)}</span></td>
                 <td>{m.status === 'scheduled' ? '–' : `${m.hs} – ${m.as}`}</td>
                 <td className="l">{m.status === 'live' ? <span className="chip live"><i />LIVE</span> : m.status === 'finished' ? (m.validated ? <span className="chip ok">Validé</span> : <span className="chip warn">À valider</span>) : <span className="chip">À venir</span>}</td>
                 <td className="l">{uname.get(m.manager_id) || <span className="muted">—</span>}</td>

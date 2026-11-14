@@ -27,7 +27,7 @@ export default async function AdminMatch({ params, searchParams }) {
     <>
       <p style={{ marginTop: 14 }}><Link href={isAdmin ? '/admin/matchs' : '/admin'}>‹ Retour</Link></p>
       <h1 className="h1" style={{ marginTop: 6, marginBottom: 4 }}>{sideName(m, 'home')} – {sideName(m, 'away')}</h1>
-      <p className="muted small" style={{ marginBottom: 14 }}>{matchTitle(m)} · {fmtDayLong(m.kickoff)} · {fmtTime(m.kickoff)}{m.venue ? ` · ${m.venue}` : ''} · <Link href={`/matchs/${m.id}`} target="_blank">Voir la page publique ↗</Link></p>
+      <p className="muted small" style={{ marginBottom: 14 }}>M{m.num} · {matchTitle(m)} · {fmtDayLong(m.kickoff)} · {fmtTime(m.kickoff)}{m.venue ? ` · ${m.venue}` : ''} · <Link href={`/matchs/${m.id}`} target="_blank">Voir la page publique ↗</Link></p>
       <Flash sp={sp} />
       {!m.home_id || !m.away_id ? (
         <div className="card pad muted">Les équipes de ce match seront connues automatiquement quand les résultats précédents seront validés.</div>
