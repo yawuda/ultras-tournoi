@@ -1,9 +1,15 @@
 # Ultras Tournoi
 
-Application web de gestion et de suivi du tournoi de football 8 contre 8 Ultras (16 équipes, 4 groupes, phase finale).
+Application web de gestion et de suivi du tournoi de football 8 contre 8 Ultras (13 équipes, 2 groupes, quarts, demi-finales et finale).
 
 - **Site public** (`/`) : accueil, matchs, fiches match en direct, classements et tableau final, équipes, joueurs, statistiques. Rafraîchissement automatique toutes les 10 secondes.
 - **Back-office** (`/admin`) : saisie rapide des matchs sur téléphone, validation des résultats, gestion des équipes, joueurs, calendrier, comptes, paramètres, historique et exports Excel / PDF.
+
+## Format
+
+- Groupe A : 7 équipes, groupe B : 6 équipes. Chaque équipe joue 4 matchs de groupe (26 matchs), selon le programme officiel daté du 16 novembre au 14 décembre 2026.
+- Les 4 premiers de chaque groupe vont en quarts (1er A - 4e B, 2e A - 3e B, 1er B - 4e A, 2e B - 3e A), puis demi-finales et finale le 26 décembre. 33 matchs au total.
+- Le programme officiel, les groupes et les effectifs sont dans `lib/realdata.js`.
 
 ## Technique
 

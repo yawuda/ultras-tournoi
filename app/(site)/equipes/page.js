@@ -3,7 +3,7 @@ import { loadT } from '@/lib/page.js';
 import { groupsOf } from '@/lib/engine.js';
 import { TeamBadge } from '@/components/ui.js';
 
-export const metadata = { title: 'Équipes', description: 'Les 16 équipes du tournoi, leurs effectifs et leurs résultats.' };
+export const metadata = { title: 'Équipes', description: 'Les équipes du tournoi, leurs effectifs et leurs résultats.' };
 
 export default async function Equipes() {
   const T = await loadT();

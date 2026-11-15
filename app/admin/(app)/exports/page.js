@@ -1,7 +1,7 @@
 import { requireUser } from '@/lib/session.js';
 
 const ITEMS = [
-  ['classements', 'Classements des 4 groupes'],
+  ['classements', 'Classements des groupes'],
   ['buteurs', 'Classement des buteurs'],
   ['passeurs', 'Classement des passeurs'],
   ['joueurs', 'Statistiques de tous les joueurs'],

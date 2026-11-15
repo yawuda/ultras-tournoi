@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import { loadT } from '@/lib/page.js';
-import { groupsOf, TIEBREAKER_LABELS, thirdsRanking, bestThirdsCount, allGroupsComplete, CROSS_LABELS } from '@/lib/engine.js';
+import { groupsOf, TIEBREAKER_LABELS, thirdsRanking, bestThirdsCount, directSpots, allGroupsComplete, CROSS_LABELS } from '@/lib/engine.js';
 import { fr } from '@/lib/format.js';
 import { StandingsTable, MatchCard, TeamBadge } from '@/components/ui.js';
 
-export const metadata = { title: 'Classements et phase finale', description: 'Classements des groupes, meilleurs troisièmes et tableau de la phase finale.' };
+export const metadata = { title: 'Classements et phase finale', description: 'Classements des groupes et tableau de la phase finale.' };
 
 export default async function Classements() {
   const T = await loadT();
   const groups = groupsOf(T);
   const nThirds = bestThirdsCount(T);
+  const spots = directSpots(T);
   const thirds = nThirds ? thirdsRanking(T) : [];
   const done = allGroupsComplete(T);
   const by = (phase) => T.matches.filter((m) => m.phase === phase);
@@ -20,7 +21,7 @@ export default async function Classements() {
         {groups.map((g) => <StandingsTable key={g} T={T} grp={g} />)}
       </div>
       <div className="legend">
-        <span><i />1er et 2e : qualifiés pour les quarts de finale</span>
+        <span><i />{spots === 2 ? '1er et 2e' : `Les ${spots} premiers de chaque groupe`} : qualifiés pour les quarts de finale</span>
         {nThirds ? <span><i className="q3" />{nThirds} meilleurs 3es : qualifiés{done ? '' : ' (provisoire)'}</span> : null}
         <span><i className="out" />Éliminés</span>
       </div>
@@ -74,7 +75,7 @@ export default async function Classements() {
           <div className="col">
             <h3>Finale</h3>
             {by('final').map((m) => <div key={m.id} className="card final"><MatchCard m={m} settings={T.settings} /></div>)}
-            <h3>3e place</h3>
+            {by('third').length ? <h3>3e place</h3> : null}
             {by('third').map((m) => <MatchCard key={m.id} m={m} settings={T.settings} />)}
           </div>
         </div>

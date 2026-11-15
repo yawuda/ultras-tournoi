@@ -124,42 +124,74 @@ test('démo : commencée depuis une semaine', () => {
   assert.deepEqual(demoTiming('2026-11-16'), { startDate: '2026-11-09', playedMatches: 10 });
 });
 
-test('vraies équipes : 3 groupes et calendrier sur les créneaux', async () => {
-  const { buildReal, slotKickoffs } = await import('../lib/realdata.js');
+test('vraies équipes : 2 groupes et programme officiel', async () => {
+  const { buildReal, slotKickoffs, officialSchedule, buildSchedule } = await import('../lib/realdata.js');
   const { textToSlots, slotsToText } = await import('../lib/format.js');
+  const { directSpots, bestThirdsCount, slotLabel, matchTitle } = await import('../lib/engine.js');
   const d = buildReal();
   assert.equal(d.teams.length, 13);
-  const names = (g) => d.teams.filter((t) => t.grp === g).map((t) => t.name).sort();
-  assert.deepEqual(names('A'), ['Espérance de Tunis', 'Nsarieh', 'Panthers Team', 'Star Group', 'Tequila']);
-  assert.deepEqual(names('B'), ['G.M.K', 'Smart Construction', 'Sunrise Team', 'Taste Life']);
-  assert.deepEqual(names('C'), ['Aigle', 'Bokutani', 'Le Centre', 'Z Team']);
-  assert.equal(d.matches.length, 31);
-  assert.equal(d.matches.filter((m) => m.phase === 'group').length, 22);
-  assert.equal(d.matches[0].kickoff, '2026-11-16T20:00');
-  // numérotation M23 à M31 conforme au règlement
-  const ko = d.matches.slice(22).map((m) => `${m.code}:${m.home_src}-${m.away_src}`);
-  assert.deepEqual(ko, ['QF1:1A-3*1', 'QF2:1B-2C', 'QF3:1C-2B', 'QF4:2A-3*2', 'DF1:W:QF1-W:QF2', 'DF2:W:QF3-W:QF4', '5P:QL1-QL2', '3P:L:DF1-L:DF2', 'F:W:DF1-W:DF2']);
-  const wds = new Set(d.matches.map((m) => new Date(m.kickoff.slice(0, 10) + 'T00:00:00Z').getUTCDay()));
-  assert.deepEqual([...wds].sort(), [1, 2, 3, 6]);
-  assert.equal(slotKickoffs('2026-11-16', d.settings.slots, 10).filter((k) => k < '2026-11-23').length, 5);
-  // chacun joue contre toutes les équipes de son groupe, jamais deux fois le même jour
+  assert.equal(d.players.length, 163);
+  const names = (g) => d.teams.filter((t) => t.grp === g).map((t) => t.name).sort((a, b) => a.localeCompare(b, 'fr'));
+  assert.deepEqual(names('A'), ['Espérance de Tunis (EST)', 'Les Aigles', 'Panthers Team', 'Smart Construction', 'Star Group (SG)', 'Sunrise Team', 'Z Team']);
+  assert.deepEqual(names('B'), ['Bokutani', 'G.M.K', 'Le Centre', 'Nsarieh', 'Tasty Life', 'Tequila']);
+  assert.equal(d.matches.length, 33);
+  const group = d.matches.filter((m) => m.phase === 'group');
+  assert.equal(group.length, 26);
+  assert.equal(group.filter((m) => m.grp === 'A').length, 14);
+  assert.equal(group.filter((m) => m.grp === 'B').length, 12);
+  // programme officiel : quelques affiches datées
+  const nm = Object.fromEntries(d.teams.map((t) => [t.id, t.name]));
+  const at = (k) => { const m = d.matches.find((x) => x.kickoff === k); return m.home_id ? `${nm[m.home_id]} - ${nm[m.away_id]}` : `${m.code}:${m.home_src}-${m.away_src}`; };
+  assert.equal(at('2026-11-16T20:00'), 'Panthers Team - Smart Construction');
+  assert.equal(at('2026-11-16T22:00'), 'Nsarieh - Tequila');
+  assert.equal(at('2026-11-18T20:00'), 'Z Team - Espérance de Tunis (EST)');
+  assert.equal(at('2026-11-18T22:00'), 'Star Group (SG) - Sunrise Team');
+  assert.equal(at('2026-12-14T22:00'), 'Bokutani - Tasty Life');
+  assert.equal(at('2026-12-15T20:00'), 'QF1:1A-4B');
+  assert.equal(at('2026-12-26T22:00'), 'F:W:DF1-W:DF2');
+  const ko = d.matches.slice(26).map((m) => `${m.code}:${m.home_src}-${m.away_src}`);
+  assert.deepEqual(ko, ['QF1:1A-4B', 'QF2:2A-3B', 'QF3:1B-4A', 'QF4:2B-3A', 'DF1:W:QF1-W:QF3', 'DF2:W:QF2-W:QF4', 'F:W:DF1-W:DF2']);
+  // tous les matchs tombent sur un créneau hebdomadaire, un seul match par créneau
+  const slots = new Set(slotKickoffs('2026-11-16', d.settings.slots, 60));
+  assert.ok(d.matches.every((m) => slots.has(m.kickoff)));
+  assert.equal(new Set(d.matches.map((m) => m.kickoff)).size, 33);
+  assert.equal(slotKickoffs('2026-11-16', d.settings.slots, 10).filter((k) => k < '2026-11-23').length, 6);
+  // chaque équipe joue 4 matchs de groupe, contre 4 adversaires différents de son groupe, jamais deux fois le même jour
   for (const t of d.teams) {
-    const ms = d.matches.filter((m) => m.phase === 'group' && (m.home_id === t.id || m.away_id === t.id));
-    const size = d.teams.filter((x) => x.grp === t.grp).length;
-    assert.equal(ms.length, size - 1, t.name);
-    assert.equal(new Set(ms.map((m) => (m.home_id === t.id ? m.away_id : m.home_id))).size, size - 1);
-    assert.equal(new Set(ms.map((m) => m.kickoff.slice(0, 10))).size, size - 1, `${t.name} joue deux fois le même jour`);
+    const ms = group.filter((m) => m.home_id === t.id || m.away_id === t.id);
+    assert.equal(ms.length, 4, t.name);
+    assert.ok(ms.every((m) => m.grp === t.grp), t.name);
+    assert.equal(new Set(ms.map((m) => (m.home_id === t.id ? m.away_id : m.home_id))).size, 4);
+    assert.equal(new Set(ms.map((m) => m.kickoff.slice(0, 10))).size, 4, `${t.name} joue deux fois le même jour`);
   }
+  // Panthers Team : matchs de groupes à 20h
+  const pan = d.teams.find((t) => t.short === 'PAN').id;
+  assert.ok(group.filter((m) => m.home_id === pan || m.away_id === pan).every((m) => m.kickoff.endsWith('T20:00')));
   // les quarts commencent après le dernier match de groupe
-  const lastGroup = d.matches.filter((m) => m.phase === 'group').map((m) => m.kickoff).sort().pop();
+  const lastGroup = group.map((m) => m.kickoff).sort().pop();
   assert.ok(d.matches.filter((m) => m.phase === 'qf').every((m) => m.kickoff > lastGroup));
-  assert.equal(textToSlots('lun 20h, lun 22:00, mardi 20h00, mer 22:00, sam 22h'), '1-20:00,1-22:00,2-20:00,3-22:00,6-22:00');
+  // 4 qualifiés par groupe, pas de meilleurs 3es
+  const T = build(d);
+  assert.equal(directSpots(T), 4);
+  assert.equal(bestThirdsCount(T), 0);
+  assert.equal(slotLabel('4B'), '4e Groupe B');
+  assert.equal(matchTitle(T.matches[0]), 'Groupe A');
+  // groupes modifiés : plus de programme officiel, calendrier automatique à 2 groupes
+  const moved = d.teams.map((t) => (t.short === 'ZT' ? { ...t, grp: 'B' } : t));
+  assert.equal(officialSchedule(moved), null);
+  const auto = buildSchedule(moved);
+  assert.equal(auto.filter((m) => m.phase === 'group').length, 15 + 21);
+  assert.equal(auto.filter((m) => m.phase !== 'group').length, 7);
+  assert.equal(textToSlots('lun 20h, lun 22:00, mardi 20h00, mer 20h, mer 22:00, sam 22h'), '1-20:00,1-22:00,2-20:00,3-20:00,3-22:00,6-22:00');
   assert.equal(slotsToText('1-20:00,6-22:00'), 'lun 20:00, sam 22:00');
-  const teq = d.teams.find((t) => t.short === 'TEQ');
-  const tp = d.players.filter((p) => p.team_id === teq.id);
-  assert.equal(tp.length, 14);
-  assert.ok(tp.find((p) => p.last_name === 'Tiger').is_captain);
-  assert.equal(tp.find((p) => p.last_name === 'Kambamba').position, 'G');
+  // effectifs du 14 novembre
+  const squad = (short) => d.players.filter((p) => p.team_id === d.teams.find((t) => t.short === short).id);
+  const sizes = Object.fromEntries(d.teams.map((t) => [t.short, squad(t.short).length]));
+  assert.deepEqual(sizes, { SUN: 13, TL: 13, SG: 10, GMK: 13, LC: 11, PAN: 14, SMC: 12, NSA: 11, EST: 13, AIG: 13, ZT: 12, BOK: 14, TEQ: 14 });
+  assert.ok(squad('TEQ').find((p) => p.last_name === 'Tiger').is_captain);
+  assert.equal(squad('TEQ').find((p) => p.last_name === 'Kambamba').position, 'G');
+  assert.ok(squad('SG').some((p) => p.last_name === 'Kabongo Tshilumba Gabriel (KBG)'));
+  assert.ok(squad('LC').some((p) => p.last_name === 'Sabra') && !squad('LC').some((p) => p.last_name === 'Merlin'));
   for (const tm of d.teams) assert.equal(d.players.filter((p) => p.team_id === tm.id && p.is_captain).length, 1, tm.name);
 });
 

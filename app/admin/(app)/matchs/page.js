@@ -43,7 +43,7 @@ export default async function AdminMatches({ searchParams }) {
       </div>
       <section className="sec">
         <h2 className="h2">Créer un match</h2>
-        <p className="small muted">Le calendrier complet (24 matchs de groupes + phase finale) est déjà généré. Utilisez ce formulaire seulement pour un match supplémentaire.</p>
+        <p className="small muted">Le calendrier complet (matchs de groupes + phase finale) est déjà généré. Utilisez ce formulaire seulement pour un match supplémentaire.</p>
         <form action={saveMatchAction} className="card pad form-grid">
           <label className="f">Phase<select name="phase" defaultValue="group">{Object.entries(PHASE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
           <label className="f">Domicile<select name="home_id" required defaultValue=""><option value="" disabled>Choisir</option>{T.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
@@ -51,7 +51,7 @@ export default async function AdminMatches({ searchParams }) {
           <label className="f">Date<input type="date" name="date" required /></label>
           <label className="f">Heure<input type="time" name="time" required /></label>
           <label className="f">Terrain<input name="venue" defaultValue={T.settings.venue || ''} /></label>
-          <label className="f">Journée<input type="number" name="round" min="1" max="3" /></label>
+          <label className="f">Journée<input type="number" name="round" min="1" /></label>
           <button className="btn primary" type="submit">Créer</button>
         </form>
       </section>

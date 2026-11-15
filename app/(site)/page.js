@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { loadT } from '@/lib/page.js';
-import { groupsOf, bestThirdsCount, tournamentStats, qualifiedTeams, playerStats, ranking } from '@/lib/engine.js';
+import { groupsOf, bestThirdsCount, directSpots, tournamentStats, qualifiedTeams, playerStats, ranking } from '@/lib/engine.js';
 import { fmtDay, fullName, fr } from '@/lib/format.js';
 import { MatchCard, StandingsTable, TeamBadge, Avatar, RankList } from '@/components/ui.js';
 
@@ -34,11 +34,11 @@ export default async function Home() {
             <h2 className="h2">Classements</h2>
             <Link href="/classements">Détail et phase finale</Link>
           </div>
-          <div className={groupsOf(T).length === 3 ? 'groups4 g3' : 'groups4'}>
+          <div className={groupsOf(T).length === 3 ? 'groups4 g3' : groupsOf(T).length === 2 ? 'groups4 g2' : 'groups4'}>
             {groupsOf(T).map((g) => <StandingsTable key={g} T={T} grp={g} full={false} compact />)}
           </div>
           <div className="legend">
-            <span><i />Les 2 premiers de chaque groupe sont qualifiés pour les quarts de finale</span>
+            <span><i />Les {directSpots(T)} premiers de chaque groupe sont qualifiés pour les quarts de finale</span>
             {bestThirdsCount(T) ? <span><i className="q3" />Les {bestThirdsCount(T)} meilleurs 3es aussi (provisoire tant que les groupes ne sont pas terminés)</span> : null}
           </div>
         </section>
@@ -74,7 +74,7 @@ export default async function Home() {
                   {qualified.map((x) => (
                     <Link key={x.team.id} href={`/equipes/${x.team.id}`} className="card pad row">
                       <TeamBadge team={x.team} size={36} />
-                      <span><b style={{ display: 'block' }}>{x.team.name}</b><span className="small muted">{x.pos === 1 ? '1er' : '2e'} du groupe {x.grp}</span></span>
+                      <span><b style={{ display: 'block' }}>{x.team.name}</b><span className="small muted">{x.pos === 1 ? '1er' : `${x.pos}e`} du groupe {x.grp}</span></span>
                     </Link>
                   ))}
                 </div>

@@ -35,7 +35,7 @@ export default async function Matchs({ searchParams }) {
       <form className="filters" method="get">
         <select name="phase" defaultValue={f.phase} aria-label="Phase">
           <option value="">Toutes les phases</option>
-          {Object.entries(PHASE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {Object.entries(PHASE_LABELS).filter(([k]) => T.matches.some((m) => m.phase === k)).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select name="groupe" defaultValue={f.grp} aria-label="Groupe">
           <option value="">Tous les groupes</option>

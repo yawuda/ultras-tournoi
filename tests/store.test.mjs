@@ -224,21 +224,26 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '6');
-  assert.equal(t.matches.length, 31);
+  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.matches.length, 33);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
-  // régénération du calendrier après changement de groupe
+  // changement de groupe : le programme officiel ne s'applique plus, calendrier automatique
   await S.saveTeam(admin, { id: 1, name: 'Sunrise Team', short: 'SUN', grp: 'D', color: '#C2410C' });
   await assert.rejects(() => S.rebuildSchedule(admin), /au moins 3/);
   await S.saveTeam(admin, { id: 1, name: 'Sunrise Team', short: 'SUN', grp: 'B', color: '#C2410C' });
   await S.saveSettings(admin, { slots: 'xx', start_date: '2026-11-16' }).catch((e) => assert.match(e.message, /créneau/));
-  await S.rebuildSchedule(admin);
+  assert.equal(await S.rebuildSchedule(admin), 15 + 21 + 7);
+  // retour aux groupes officiels : le programme officiel est remis en place
+  await S.saveTeam(admin, { id: 1, name: 'Sunrise Team', short: 'SUN', grp: 'A', color: '#C2410C' });
+  assert.equal(await S.rebuildSchedule(admin), 33);
   const t2 = await mod.loadTournament({ fresh: true });
-  assert.equal(t2.matches.length, 31);
+  assert.equal(t2.matches.length, 33);
+  assert.equal(t2.matches[0].kickoff, '2026-11-16T20:00');
+  assert.equal(`${t2.matches[0].home.short}-${t2.matches[0].away.short}`, 'PAN-SMC');
 });
 
-test('v3 : Aigle et Z Team remplacent les places vides, capitaines', async () => {
+test('v3 : Les Aigles et Z Team remplacent les places vides, capitaines', async () => {
   // base en v2 : « Équipe 10 » et « Équipe 11 » vides
   await adapter.exec("UPDATE settings SET value = '2' WHERE key = 'data_version'; UPDATE teams SET name = 'Équipe 10', short = 'E10' WHERE id = 10; UPDATE teams SET name = 'Équipe 11', short = 'E11' WHERE id = 11; DELETE FROM players WHERE team_id IN (10, 11); UPDATE players SET is_captain = FALSE;");
   const { exec } = await import('../lib/db.js');
@@ -249,10 +254,10 @@ test('v3 : Aigle et Z Team remplacent les places vides, capitaines', async () =>
   let t = await S.loadTournament({ fresh: true });
   const aigle = t.teamById.get(10);
   const z = t.teamById.get(11);
-  assert.equal(aigle.name, 'Aigle');
+  assert.equal(aigle.name, 'Les Aigles');
   assert.equal(z.name, 'Z Team');
   assert.equal(t.players.filter((p) => p.team_id === 10).length, 13);
-  assert.equal(t.players.filter((p) => p.team_id === 11).length, 11);
+  assert.equal(t.players.filter((p) => p.team_id === 11).length, 12);
   assert.ok(t.players.some((p) => p.team_id === 11 && p.last_name === 'Matta' && p.position === 'G'));
   const gmk = t.teams.find((x) => x.short === 'GMK');
   const firstGmk = t.players.find((p) => p.team_id === gmk.id);
@@ -313,58 +318,171 @@ test('v5 : Bokutani remplace Équipe 12', async () => {
   assert.equal(squad.filter((p) => p.is_captain).length, 1);
 });
 
-test('v6 : passage à 3 groupes depuis la v5 (places vides, Tequila)', async () => {
+const OFFICIAL_A = 'AIG,EST,PAN,SG,SMC,SUN,ZT';
+const OFFICIAL_B = 'BOK,GMK,LC,NSA,TEQ,TL';
+const groupOf = (t, k) => t.teams.filter((x) => x.grp === k).map((x) => x.short).sort().join(',');
+const squadOf = (t, short) => t.players.filter((p) => p.team_id === t.teams.find((x) => x.short === short).id);
+const label = (p) => [p.first_name, p.last_name].filter(Boolean).join(' ');
+
+test('v5 -> v7 : places vides supprimées, Tequila ajoutée, 2 groupes', async () => {
   // état « v5 » : 16 équipes dont 4 places vides, 4 groupes, pas de Tequila
   await adapter.exec(`UPDATE settings SET value = '5' WHERE key = 'data_version';
     DELETE FROM teams WHERE short = 'TEQ';
     UPDATE teams SET name = 'Aigle' WHERE short = 'AIG';
     INSERT INTO teams (name, short, grp, color) VALUES ('Équipe 13', 'E13', 'A', '#555'), ('Équipe 14', 'E14', 'B', '#555'), ('Équipe 15', 'E15', 'C', '#555'), ('Équipe 16', 'E16', 'D', '#555');
     UPDATE teams SET grp = 'D' WHERE short IN ('GMK', 'NSA', 'BOK');`);
-  const mod = await import('../lib/store.js?v6');
+  const mod = await import('../lib/store.js?v5to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '6');
+  assert.equal(t.settings.data_version, '7');
   assert.equal(t.teams.length, 13);
   assert.ok(!t.teams.some((x) => x.name.startsWith('Équipe ')));
-  const g = (k) => t.teams.filter((x) => x.grp === k).map((x) => x.short).sort().join(',');
-  assert.equal(g('A'), 'EST,NSA,PAN,SG,TEQ');
-  assert.equal(g('B'), 'GMK,SMC,SUN,TL');
-  assert.equal(g('C'), 'AIG,BOK,LC,ZT');
-  assert.equal(g('D'), '');
-  assert.equal(t.players.filter((p) => p.team_id === t.teams.find((x) => x.short === 'TEQ').id).length, 14);
-  assert.equal(t.matches.length, 31);
+  assert.equal(groupOf(t, 'A'), OFFICIAL_A);
+  assert.equal(groupOf(t, 'B'), OFFICIAL_B);
+  assert.equal(groupOf(t, 'C') + groupOf(t, 'D'), '');
+  assert.equal(t.teams.find((x) => x.short === 'AIG').name, 'Les Aigles');
+  assert.equal(squadOf(t, 'TEQ').length, 14);
+  assert.equal(t.matches.length, 33);
   // migration rejouée : rien ne bouge
   await adapter.exec("UPDATE settings SET value = '5' WHERE key = 'data_version';");
-  const mod2 = await import('../lib/store.js?v6b');
+  const mod2 = await import('../lib/store.js?v5to7b');
   t = await mod2.loadTournament({ fresh: true });
   assert.equal(t.teams.length, 13);
-  assert.equal(t.players.filter((p) => p.team_id === t.teams.find((x) => x.short === 'TEQ').id).length, 14);
+  assert.equal(t.players.length, 163);
+  assert.equal(t.matches.length, 33);
 });
 
-test('format à 3 groupes : tournoi complet jusqu\'à la finale', async () => {
+// Remet la base dans l'état « v6 » (3 groupes, anciens noms et effectifs, 31 matchs).
+async function backToV6() {
+  await adapter.exec(`UPDATE settings SET value = '6' WHERE key = 'data_version';
+    UPDATE settings SET value = '1-20:00,1-22:00,2-20:00,3-22:00,6-22:00' WHERE key = 'slots';
+    UPDATE teams SET name = 'Aigle' WHERE short = 'AIG';
+    UPDATE teams SET name = 'Taste Life' WHERE short = 'TL';
+    UPDATE teams SET name = 'Star Group' WHERE short = 'SG';
+    UPDATE teams SET name = 'Espérance de Tunis' WHERE short = 'EST';
+    UPDATE teams SET grp = 'A' WHERE short IN ('NSA', 'PAN', 'SG', 'EST', 'TEQ');
+    UPDATE teams SET grp = 'B' WHERE short IN ('SMC', 'GMK', 'TL', 'SUN');
+    UPDATE teams SET grp = 'C' WHERE short IN ('AIG', 'ZT', 'LC', 'BOK');
+    DELETE FROM players WHERE last_name IN ('Sabra', 'Yan', 'Alvin', 'Josee');
+    UPDATE players SET first_name = 'JK', last_name = 'Hernandez' WHERE last_name = 'Jk';
+    UPDATE players SET last_name = 'NS' WHERE last_name IN ('NS 17', 'Ns');
+    UPDATE players SET first_name = 'Kabongo', last_name = 'Tshilumba' WHERE last_name = 'Kabongo Tshilumba Gabriel (KBG)';
+    INSERT INTO players (team_id, first_name, last_name, position) SELECT id, NULL, 'Gabriel', 'G' FROM teams WHERE short = 'SG';
+    INSERT INTO players (team_id, first_name, last_name) SELECT id, NULL, 'Merlin' FROM teams WHERE short = 'LC';
+    INSERT INTO players (team_id, first_name, last_name) SELECT id, NULL, 'Bastien' FROM teams WHERE short = 'LC';
+    INSERT INTO players (team_id, first_name, last_name) SELECT id, 'Alvine', 'Hernandez' FROM teams WHERE short = 'LC';
+    TRUNCATE lineups, events, matches RESTART IDENTITY CASCADE;
+    INSERT INTO matches (phase, grp, round, code, kickoff, venue, home_id, away_id)
+      SELECT 'group', 'A', 1, 'A' || g, '2026-11-16T20:00', 'Terrain Ultras', (SELECT id FROM teams WHERE short = 'NSA'), (SELECT id FROM teams WHERE short = 'PAN') FROM generate_series(1, 22) g;
+    INSERT INTO matches (phase, code, kickoff, home_src, away_src) SELECT 'qf', 'X' || g, '2026-12-20T20:00', '1A', '3*1' FROM generate_series(1, 9) g;`);
+  S.invalidate();
+}
+
+test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async () => {
+  await backToV6();
+  // modifications faites à la main par les organisateurs avant la mise à jour
+  const lc = (await adapter.q("SELECT id FROM teams WHERE short = 'LC'"))[0].id;
+  await adapter.exec(`INSERT INTO players (team_id, first_name, last_name, number) VALUES (${lc}, 'Joueur', 'Ajouté', 99);
+    UPDATE players SET number = 10 WHERE last_name = 'Bourgi' AND first_name = 'Ali';`);
+  const before = await adapter.q('SELECT count(*)::int AS n FROM players');
+  assert.equal(before[0].n, 163 - 4 + 3 + 1 + 1);
+  const mod = await import('../lib/store.js?v6to7');
+  let t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.settings.slots, '1-20:00,1-22:00,2-20:00,3-20:00,3-22:00,6-22:00');
+  assert.equal(t.teams.length, 13);
+  assert.equal(groupOf(t, 'A'), OFFICIAL_A);
+  assert.equal(groupOf(t, 'B'), OFFICIAL_B);
+  assert.equal(groupOf(t, 'C'), '');
+  assert.deepEqual(['AIG', 'TL', 'SG', 'EST'].map((k) => t.teams.find((x) => x.short === k).name), ['Les Aigles', 'Tasty Life', 'Star Group (SG)', 'Espérance de Tunis (EST)']);
+  // effectifs du 14 novembre, sans toucher aux ajouts des organisateurs
+  assert.deepEqual(squadOf(t, 'LC').map(label).sort(), ['Adel Karim', 'Ahmad Bourgi', 'Ali Bourgi', 'Bobo', 'Hassan Attie', 'Iyad Achour', 'Jad Achour', 'Jk', 'Joueur Ajouté', 'Mahdi Sabra', 'Mardoche Liwanga', 'Yan']);
+  assert.equal(squadOf(t, 'LC').find((p) => p.last_name === 'Bourgi' && p.first_name === 'Ali').number, 10);
+  assert.ok(squadOf(t, 'LC')[0].is_captain);
+  assert.equal(squadOf(t, 'ZT').length, 12);
+  assert.ok(['Alvin', 'Anthony NS 17', 'Alex Ns'].every((n) => squadOf(t, 'ZT').some((p) => label(p) === n)));
+  assert.equal(squadOf(t, 'SG').length, 10);
+  assert.ok(squadOf(t, 'SG').some((p) => label(p) === 'Kabongo Tshilumba Gabriel (KBG)'));
+  assert.ok(!squadOf(t, 'SG').some((p) => p.last_name === 'Gabriel'));
+  assert.equal(squadOf(t, 'SUN').length, 13);
+  assert.equal(t.players.length, 164);
+  for (const tm of t.teams) assert.equal(t.players.filter((p) => p.team_id === tm.id && p.is_captain).length, 1, tm.name);
+  // programme officiel
+  assert.equal(t.matches.length, 33);
+  assert.equal(t.matches.filter((m) => m.phase === 'group').length, 26);
+  const show = (m) => `${m.kickoff} ${m.home.short}-${m.away.short}`;
+  assert.deepEqual(t.matches.slice(0, 6).map(show), ['2026-11-16T20:00 PAN-SMC', '2026-11-16T22:00 NSA-TEQ', '2026-11-17T20:00 BOK-GMK', '2026-11-18T20:00 ZT-EST', '2026-11-18T22:00 SG-SUN', '2026-11-21T22:00 LC-NSA']);
+  assert.equal(show(t.matches[25]), '2026-12-14T22:00 BOK-TL');
+  assert.deepEqual(t.matches.slice(26).map((m) => `${m.kickoff} ${m.code} ${m.home_src}/${m.away_src}`), [
+    '2026-12-15T20:00 QF1 1A/4B', '2026-12-16T20:00 QF2 2A/3B', '2026-12-16T22:00 QF3 1B/4A', '2026-12-19T22:00 QF4 2B/3A',
+    '2026-12-21T20:00 DF1 W:QF1/W:QF3', '2026-12-23T20:00 DF2 W:QF2/W:QF4', '2026-12-26T22:00 F W:DF1/W:DF2',
+  ]);
+  assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
+  // migration rejouée : aucun doublon
+  await adapter.exec("UPDATE settings SET value = '6' WHERE key = 'data_version';");
+  const mod2 = await import('../lib/store.js?v6to7b');
+  t = await mod2.loadTournament({ fresh: true });
+  assert.equal(t.players.length, 164);
+  assert.equal(t.matches.length, 33);
+  await adapter.exec("DELETE FROM players WHERE last_name = 'Ajouté';");
+});
+
+test('v6 -> v7 : un match déjà commencé protège le calendrier, abréviation rétablie', async () => {
+  await backToV6();
+  await adapter.exec("UPDATE matches SET status = 'live', period = '1H' WHERE id = 1; UPDATE teams SET short = 'TAS' WHERE short = 'TL';");
+  const mod = await import('../lib/store.js?v6to7c');
+  let t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.matches.length, 31, 'calendrier laissé tel quel');
+  assert.equal(t.matchById.get(1).status, 'live');
+  assert.equal(groupOf(t, 'B'), OFFICIAL_B, 'abréviation TL rétablie à partir du nom');
+  assert.equal(squadOf(t, 'LC').length, 11);
+  await assert.rejects(() => S.rebuildSchedule(admin), /déjà commencé/);
+  // une fois le match remis à zéro, l'administrateur peut remettre le programme officiel
+  await S.resetMatch(admin, 1);
+  assert.equal(await S.rebuildSchedule(admin), 33);
+  t = await S.loadTournament({ fresh: true });
+  assert.equal(t.players.length, 163);
+});
+
+test('format à 2 groupes : tournoi complet jusqu\'à la finale', async () => {
   const E = await import('../lib/engine.js');
   let t = await S.loadTournament({ fresh: true });
+  assert.equal(E.directSpots(t), 4);
+  assert.equal(E.qualifiedTeams(t).length, 0);
   const strength = (id) => (id * 7) % 11; // force arbitraire et fixe
-  for (const m of t.matches.filter((x) => x.phase === 'group')) {
+  const groupMatches = t.matches.filter((x) => x.phase === 'group');
+  assert.equal(groupMatches.length, 26);
+  for (const m of groupMatches) {
     const hs = Math.max(0, Math.round(strength(m.home_id) / 3) - (m.id % 2));
     const as = Math.max(0, Math.round(strength(m.away_id) / 3) - ((m.id + 1) % 2));
     await S.startMatch(admin, m.id);
     for (let i = 0; i < hs; i++) await S.addEvent(admin, { match_id: m.id, team_id: m.home_id, type: 'goal', minute: 10 + i });
     for (let i = 0; i < as; i++) await S.addEvent(admin, { match_id: m.id, team_id: m.away_id, type: 'goal', minute: 30 + i });
     await S.finishMatch(admin, m.id);
+    if (m.id === 25) {
+      // tant que le groupe A n'est pas entièrement validé, les quarts restent vides
+      const mid = await S.loadTournament({ fresh: true });
+      assert.equal(mid.matchByCode.get('QF1').home_id, null);
+    }
     await S.validateMatch(admin, m.id);
   }
   t = await S.loadTournament({ fresh: true });
   assert.ok(E.allGroupsComplete(t));
-  const st = Object.fromEntries(['A', 'B', 'C'].map((k) => [k, E.groupStandings(t, k)]));
-  const thirds = E.thirdsRanking(t);
-  assert.equal(thirds.length, 3);
+  const st = { A: E.groupStandings(t, 'A'), B: E.groupStandings(t, 'B') };
+  assert.equal(st.A.length, 7);
+  assert.equal(st.B.length, 6);
+  assert.ok([...st.A, ...st.B].every((r) => r.j === 4), 'chaque équipe a joué 4 matchs');
   const q = (c) => t.matchByCode.get(c);
-  assert.deepEqual([q('QF1').home_id, q('QF1').away_id], [st.A[0].team.id, thirds[0].team.id]);
-  assert.deepEqual([q('QF2').home_id, q('QF2').away_id], [st.B[0].team.id, st.C[1].team.id]);
-  assert.deepEqual([q('QF3').home_id, q('QF3').away_id], [st.C[0].team.id, st.B[1].team.id]);
-  assert.deepEqual([q('QF4').home_id, q('QF4').away_id], [st.A[1].team.id, thirds[1].team.id]);
-  assert.equal(E.qualifiedTeams(t).length, 8);
-  // quarts : à domicile gagne, sauf QF2 aux tirs au but
+  const pair = (c) => [q(c).home_id, q(c).away_id];
+  assert.deepEqual(pair('QF1'), [st.A[0].team.id, st.B[3].team.id]);
+  assert.deepEqual(pair('QF2'), [st.A[1].team.id, st.B[2].team.id]);
+  assert.deepEqual(pair('QF3'), [st.B[0].team.id, st.A[3].team.id]);
+  assert.deepEqual(pair('QF4'), [st.B[1].team.id, st.A[2].team.id]);
+  const qualified = E.qualifiedTeams(t);
+  assert.equal(qualified.length, 8);
+  assert.equal(new Set(qualified.map((x) => x.team.id)).size, 8);
+  assert.ok(!qualified.some((x) => [st.A[4], st.A[5], st.A[6], st.B[4], st.B[5]].some((r) => r.team.id === x.team.id)));
+  // quarts : l'équipe à domicile gagne, sauf QF2 aux tirs au but
   for (const c of ['QF1', 'QF3', 'QF4']) {
     const m = q(c);
     await S.startMatch(admin, m.id);
@@ -372,21 +490,17 @@ test('format à 3 groupes : tournoi complet jusqu\'à la finale', async () => {
     await S.finishMatch(admin, m.id);
     await S.validateMatch(admin, m.id);
   }
-  t = await S.loadTournament({ fresh: true });
-  assert.equal(q('5P').home_id, null, '5e place : attend la fin de tous les quarts');
-  const m2 = t.matchByCode.get('QF2');
+  const m2 = q('QF2');
   await S.startMatch(admin, m2.id);
   for (const p of ['HT', '2H', 'FT', 'ET1', 'ETB', 'ET2', 'PEN']) await S.setPeriod(admin, m2.id, p);
   await S.setPens(admin, m2.id, 2, 4);
   await S.finishMatch(admin, m2.id);
   await S.validateMatch(admin, m2.id);
   t = await S.loadTournament({ fresh: true });
-  const losers = E.quarterLosersRanking(t);
-  assert.equal(losers.length, 4);
-  assert.deepEqual([t.matchByCode.get('5P').home_id, t.matchByCode.get('5P').away_id], [losers[0].team.id, losers[1].team.id]);
-  assert.deepEqual([t.matchByCode.get('DF1').home_id, t.matchByCode.get('DF1').away_id], [t.matchByCode.get('QF1').home_id, t.matchByCode.get('QF2').away_id]);
-  assert.deepEqual([t.matchByCode.get('DF2').home_id, t.matchByCode.get('DF2').away_id], [t.matchByCode.get('QF3').home_id, t.matchByCode.get('QF4').home_id]);
-  for (const c of ['DF1', 'DF2', '5P', '3P', 'F']) {
+  assert.deepEqual(pair('DF1'), [q('QF1').home_id, q('QF3').home_id]);
+  assert.deepEqual(pair('DF2'), [q('QF2').away_id, q('QF4').home_id]);
+  assert.ok(!t.matches.some((m) => m.phase === 'third' || m.phase === 'fifth'), 'pas de match de classement');
+  for (const c of ['DF1', 'DF2', 'F']) {
     const m = (await S.loadTournament({ fresh: true })).matchByCode.get(c);
     assert.ok(m.home_id && m.away_id, `${c} : équipes connues`);
     await S.startMatch(admin, m.id);
@@ -396,5 +510,6 @@ test('format à 3 groupes : tournoi complet jusqu\'à la finale', async () => {
   }
   t = await S.loadTournament({ fresh: true });
   assert.equal(E.tournamentStatus(t), 'finished');
+  assert.equal(E.tournamentStats(t).played, 33);
   assert.equal(t.matchByCode.get('F').winner_id, t.matchByCode.get('DF2').winner_id);
 });
