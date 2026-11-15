@@ -254,3 +254,17 @@ body:has(.site) { background: #0b0d11; }
 @media (min-width: 900px) { .groups4.g2 .compact table.t td.team span.tn { max-width: 260px; } }
 @media (max-width: 899px) { .groups4.g3 > :first-child { grid-column: 1 / -1; } }
 .site .card.muted { color: var(--muted); }
+
+/* Classements à 2 groupes : deux tableaux identiques côte à côte, une équipe par ligne */
+@media (min-width: 900px) {
+  .std2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .std2 table.t { table-layout: fixed; }
+  .std2 table.t th:first-child { width: 36px; }
+  .std2 table.t th:nth-child(n+3) { width: 26px; }
+  .std2 table.t th:nth-child(7), .std2 table.t th:nth-child(8) { width: 30px; }
+  .std2 table.t th:nth-child(9) { width: 36px; }
+  .std2 table.t th:nth-child(10) { width: 34px; }
+  .std2 table.t td { height: 48px; padding-top: 0; padding-bottom: 0; }
+  .std2 table.t td.team a { min-width: 0; }
+  .std2 table.t td.team span.tn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+}

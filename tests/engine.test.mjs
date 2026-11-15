@@ -133,7 +133,7 @@ test('vraies équipes : 2 groupes et programme officiel', async () => {
   assert.equal(d.players.length, 163);
   const names = (g) => d.teams.filter((t) => t.grp === g).map((t) => t.name).sort((a, b) => a.localeCompare(b, 'fr'));
   assert.deepEqual(names('A'), ['Espérance de Tunis (EST)', 'Les Aigles', 'Panthers Team', 'Smart Construction', 'Star Group (SG)', 'Sunrise Team', 'Z Team']);
-  assert.deepEqual(names('B'), ['Bokutani', 'G.M.K', 'Le Centre', 'Nsarieh', 'Tasty Life', 'Tequila']);
+  assert.deepEqual(names('B'), ['Bokutani', 'G.M.K', 'Nsarieh', 'Tasty Life', 'Tequila', 'U18']);
   assert.equal(d.matches.length, 33);
   const group = d.matches.filter((m) => m.phase === 'group');
   assert.equal(group.length, 26);
@@ -187,11 +187,11 @@ test('vraies équipes : 2 groupes et programme officiel', async () => {
   // effectifs du 14 novembre
   const squad = (short) => d.players.filter((p) => p.team_id === d.teams.find((t) => t.short === short).id);
   const sizes = Object.fromEntries(d.teams.map((t) => [t.short, squad(t.short).length]));
-  assert.deepEqual(sizes, { SUN: 13, TL: 13, SG: 10, GMK: 13, LC: 11, PAN: 14, SMC: 12, NSA: 11, EST: 13, AIG: 13, ZT: 12, BOK: 14, TEQ: 14 });
+  assert.deepEqual(sizes, { SUN: 13, TL: 13, SG: 10, GMK: 13, U18: 11, PAN: 14, SMC: 12, NSA: 11, EST: 13, AIG: 13, ZT: 12, BOK: 14, TEQ: 14 });
   assert.ok(squad('TEQ').find((p) => p.last_name === 'Tiger').is_captain);
   assert.equal(squad('TEQ').find((p) => p.last_name === 'Kambamba').position, 'G');
   assert.ok(squad('SG').some((p) => p.last_name === 'Kabongo Tshilumba Gabriel (KBG)'));
-  assert.ok(squad('LC').some((p) => p.last_name === 'Sabra') && !squad('LC').some((p) => p.last_name === 'Merlin'));
+  assert.ok(squad('U18').some((p) => p.last_name === 'Sabra') && !squad('U18').some((p) => p.last_name === 'Merlin'));
   for (const tm of d.teams) assert.equal(d.players.filter((p) => p.team_id === tm.id && p.is_captain).length, 1, tm.name);
 });
 

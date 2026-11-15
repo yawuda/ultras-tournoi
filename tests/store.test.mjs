@@ -224,7 +224,7 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.settings.data_version, '8');
   assert.equal(t.matches.length, 33);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
@@ -281,7 +281,7 @@ test('v3 : Les Aigles et Z Team remplacent les places vides, capitaines', async 
 });
 
 test('v4 : capitaines de toutes les équipes, effectif EST', async () => {
-  await adapter.exec("UPDATE settings SET value = '3' WHERE key = 'data_version'; UPDATE players SET is_captain = FALSE;");
+  await adapter.exec("UPDATE settings SET value = '3' WHERE key = 'data_version'; UPDATE players SET is_captain = FALSE; UPDATE teams SET name = 'Le Centre', short = 'LC' WHERE short = 'U18';");
   await adapter.exec("INSERT INTO players (team_id, last_name) SELECT id, 'Dida' FROM teams WHERE short = 'EST' AND NOT EXISTS (SELECT 1 FROM players p WHERE p.last_name = 'Dida'); DELETE FROM players WHERE last_name = 'Derouich';");
   const { exec } = await import('../lib/db.js');
   const { v4Script } = await import('../lib/seed.js');
@@ -319,7 +319,7 @@ test('v5 : Bokutani remplace Équipe 12', async () => {
 });
 
 const OFFICIAL_A = 'AIG,EST,PAN,SG,SMC,SUN,ZT';
-const OFFICIAL_B = 'BOK,GMK,LC,NSA,TEQ,TL';
+const OFFICIAL_B = 'BOK,GMK,NSA,TEQ,TL,U18';
 const groupOf = (t, k) => t.teams.filter((x) => x.grp === k).map((x) => x.short).sort().join(',');
 const squadOf = (t, short) => t.players.filter((p) => p.team_id === t.teams.find((x) => x.short === short).id);
 const label = (p) => [p.first_name, p.last_name].filter(Boolean).join(' ');
@@ -333,7 +333,7 @@ test('v5 -> v7 : places vides supprimées, Tequila ajoutée, 2 groupes', async (
     UPDATE teams SET grp = 'D' WHERE short IN ('GMK', 'NSA', 'BOK');`);
   const mod = await import('../lib/store.js?v5to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.settings.data_version, '8');
   assert.equal(t.teams.length, 13);
   assert.ok(!t.teams.some((x) => x.name.startsWith('Équipe ')));
   assert.equal(groupOf(t, 'A'), OFFICIAL_A);
@@ -355,6 +355,7 @@ test('v5 -> v7 : places vides supprimées, Tequila ajoutée, 2 groupes', async (
 async function backToV6() {
   await adapter.exec(`UPDATE settings SET value = '6' WHERE key = 'data_version';
     UPDATE settings SET value = '1-20:00,1-22:00,2-20:00,3-22:00,6-22:00' WHERE key = 'slots';
+    UPDATE teams SET name = 'Le Centre', short = 'LC' WHERE short = 'U18';
     UPDATE teams SET name = 'Aigle' WHERE short = 'AIG';
     UPDATE teams SET name = 'Taste Life' WHERE short = 'TL';
     UPDATE teams SET name = 'Star Group' WHERE short = 'SG';
@@ -387,7 +388,8 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   assert.equal(before[0].n, 163 - 4 + 3 + 1 + 1);
   const mod = await import('../lib/store.js?v6to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.settings.data_version, '8');
+  assert.equal(t.teams.find((x) => x.short === 'U18').name, 'U18');
   assert.equal(t.settings.slots, '1-20:00,1-22:00,2-20:00,3-20:00,3-22:00,6-22:00');
   assert.equal(t.teams.length, 13);
   assert.equal(groupOf(t, 'A'), OFFICIAL_A);
@@ -395,9 +397,9 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   assert.equal(groupOf(t, 'C'), '');
   assert.deepEqual(['AIG', 'TL', 'SG', 'EST'].map((k) => t.teams.find((x) => x.short === k).name), ['Les Aigles', 'Tasty Life', 'Star Group (SG)', 'Espérance de Tunis (EST)']);
   // effectifs du 14 novembre, sans toucher aux ajouts des organisateurs
-  assert.deepEqual(squadOf(t, 'LC').map(label).sort(), ['Adel Karim', 'Ahmad Bourgi', 'Ali Bourgi', 'Bobo', 'Hassan Attie', 'Iyad Achour', 'Jad Achour', 'Jk', 'Joueur Ajouté', 'Mahdi Sabra', 'Mardoche Liwanga', 'Yan']);
-  assert.equal(squadOf(t, 'LC').find((p) => p.last_name === 'Bourgi' && p.first_name === 'Ali').number, 10);
-  assert.ok(squadOf(t, 'LC')[0].is_captain);
+  assert.deepEqual(squadOf(t, 'U18').map(label).sort(), ['Adel Karim', 'Ahmad Bourgi', 'Ali Bourgi', 'Bobo', 'Hassan Attie', 'Iyad Achour', 'Jad Achour', 'Jk', 'Joueur Ajouté', 'Mahdi Sabra', 'Mardoche Liwanga', 'Yan']);
+  assert.equal(squadOf(t, 'U18').find((p) => p.last_name === 'Bourgi' && p.first_name === 'Ali').number, 10);
+  assert.ok(squadOf(t, 'U18')[0].is_captain);
   assert.equal(squadOf(t, 'ZT').length, 12);
   assert.ok(['Alvin', 'Anthony NS 17', 'Alex Ns'].every((n) => squadOf(t, 'ZT').some((p) => label(p) === n)));
   assert.equal(squadOf(t, 'SG').length, 10);
@@ -410,7 +412,7 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   assert.equal(t.matches.length, 33);
   assert.equal(t.matches.filter((m) => m.phase === 'group').length, 26);
   const show = (m) => `${m.kickoff} ${m.home.short}-${m.away.short}`;
-  assert.deepEqual(t.matches.slice(0, 6).map(show), ['2026-11-16T20:00 PAN-SMC', '2026-11-16T22:00 NSA-TEQ', '2026-11-17T20:00 BOK-GMK', '2026-11-18T20:00 ZT-EST', '2026-11-18T22:00 SG-SUN', '2026-11-21T22:00 LC-NSA']);
+  assert.deepEqual(t.matches.slice(0, 6).map(show), ['2026-11-16T20:00 PAN-SMC', '2026-11-16T22:00 NSA-TEQ', '2026-11-17T20:00 BOK-GMK', '2026-11-18T20:00 ZT-EST', '2026-11-18T22:00 SG-SUN', '2026-11-21T22:00 U18-NSA']);
   assert.equal(show(t.matches[25]), '2026-12-14T22:00 BOK-TL');
   assert.deepEqual(t.matches.slice(26).map((m) => `${m.kickoff} ${m.code} ${m.home_src}/${m.away_src}`), [
     '2026-12-15T20:00 QF1 1A/4B', '2026-12-16T20:00 QF2 2A/3B', '2026-12-16T22:00 QF3 1B/4A', '2026-12-19T22:00 QF4 2B/3A',
@@ -431,11 +433,11 @@ test('v6 -> v7 : un match déjà commencé protège le calendrier, abréviation 
   await adapter.exec("UPDATE matches SET status = 'live', period = '1H' WHERE id = 1; UPDATE teams SET short = 'TAS' WHERE short = 'TL';");
   const mod = await import('../lib/store.js?v6to7c');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '7');
+  assert.equal(t.settings.data_version, '8');
   assert.equal(t.matches.length, 31, 'calendrier laissé tel quel');
   assert.equal(t.matchById.get(1).status, 'live');
   assert.equal(groupOf(t, 'B'), OFFICIAL_B, 'abréviation TL rétablie à partir du nom');
-  assert.equal(squadOf(t, 'LC').length, 11);
+  assert.equal(squadOf(t, 'U18').length, 11);
   await assert.rejects(() => S.rebuildSchedule(admin), /déjà commencé/);
   // une fois le match remis à zéro, l'administrateur peut remettre le programme officiel
   await S.resetMatch(admin, 1);
@@ -512,4 +514,22 @@ test('format à 2 groupes : tournoi complet jusqu\'à la finale', async () => {
   assert.equal(E.tournamentStatus(t), 'finished');
   assert.equal(E.tournamentStats(t).played, 33);
   assert.equal(t.matchByCode.get('F').winner_id, t.matchByCode.get('DF2').winner_id);
+});
+
+test('v7 -> v8 : Le Centre devient U18 sans toucher au calendrier ni aux résultats', async () => {
+  // état « v7 » : base en ligne actuelle, avec un match déjà joué
+  await S.rebuildSchedule(admin).catch(() => {});
+  await adapter.exec("UPDATE teams SET name = 'Le Centre', short = 'LC' WHERE short = 'U18'; UPDATE settings SET value = '7' WHERE key = 'data_version'; UPDATE matches SET status = 'finished', validated = true WHERE id = 6;");
+  S.invalidate();
+  const before = await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id');
+  const mod = await import('../lib/store.js?v7to8');
+  const t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.settings.data_version, '8');
+  const u18 = t.teams.find((x) => x.short === 'U18');
+  assert.equal(u18.name, 'U18');
+  assert.ok(!t.teams.some((x) => x.short === 'LC' || x.name === 'Le Centre'));
+  assert.equal(t.players.filter((p) => p.team_id === u18.id).length, 11);
+  assert.deepEqual(await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id'), before);
+  assert.equal(t.matchById.get(6).home.name, 'U18');
+  assert.equal(t.matchById.get(6).status, 'finished');
 });

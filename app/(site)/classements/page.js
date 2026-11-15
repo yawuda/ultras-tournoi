@@ -17,7 +17,7 @@ export default async function Classements() {
   return (
     <div className="wrap">
       <h1 className="h1">Classements</h1>
-      <div className="grid-auto">
+      <div className={groups.length === 2 ? 'grid-auto std2' : 'grid-auto'}>
         {groups.map((g) => <StandingsTable key={g} T={T} grp={g} />)}
       </div>
       <div className="legend">
@@ -50,14 +50,6 @@ export default async function Classements() {
         </section>
       ) : null}
 
-      <div className="card pad" style={{ marginTop: 14 }}>
-        <b>Critères de départage dans un groupe</b>
-        <ol className="steps small" style={{ margin: '6px 0 0' }}>
-          {T.tiebreakers.map((c) => <li key={c}>{TIEBREAKER_LABELS[c]}</li>)}
-        </ol>
-        <p className="small muted">Victoire 3 points, nul 1 point, défaite 0 point. Seuls les résultats validés par l'organisation sont comptés.</p>
-      </div>
-
       <section className="sec">
         <h2 className="h2">Phase finale</h2>
         <p className="small muted">Les affiches se remplissent automatiquement à la fin des groupes. En cas d'égalité : prolongation de 2 × {T.settings.et_minutes || 10} minutes, puis tirs au but.</p>
@@ -80,6 +72,14 @@ export default async function Classements() {
           </div>
         </div>
       </section>
+
+      <div className="card pad" style={{ marginTop: 22 }}>
+        <b>Critères de départage dans un groupe</b>
+        <ol className="steps small" style={{ margin: '6px 0 0' }}>
+          {T.tiebreakers.map((c) => <li key={c}>{TIEBREAKER_LABELS[c]}</li>)}
+        </ol>
+        <p className="small muted">Victoire 3 points, nul 1 point, défaite 0 point. Seuls les résultats validés par l'organisation sont comptés.</p>
+      </div>
     </div>
   );
 }
