@@ -8,7 +8,7 @@ export default async function Home() {
   const T = await loadT();
   const s = T.settings;
   const live = T.matches.filter((m) => m.status === 'live');
-  const next = T.matches.find((m) => m.status === 'scheduled');
+  const next = T.matches.filter((m) => m.status === 'scheduled').slice(0, 3);
   const last = T.matches.filter((m) => m.status === 'finished').slice(-3).reverse();
   const stats = tournamentStats(T);
   const scorers = ranking(playerStats(T), 'goals');
@@ -52,10 +52,13 @@ export default async function Home() {
               </section>
             ) : null}
 
-            {next ? (
+            {next.length ? (
               <section className="sec">
-                <h2 className="h2">Prochain match</h2>
-                <MatchCard m={next} settings={s} />
+                <div className="sec-head">
+                  <h2 className="h2">{next.length > 1 ? 'Prochains matchs' : 'Prochain match'}</h2>
+                  <Link href="/matchs">Calendrier</Link>
+                </div>
+                {next.map((m) => <MatchCard key={m.id} m={m} settings={s} />)}
               </section>
             ) : null}
 
