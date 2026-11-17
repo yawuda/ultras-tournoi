@@ -224,7 +224,7 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '9');
+  assert.equal(t.settings.data_version, '10');
   assert.equal(t.matches.length, 33);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
@@ -333,7 +333,7 @@ test('v5 -> v7 : places vides supprimées, Tequila ajoutée, 2 groupes', async (
     UPDATE teams SET grp = 'D' WHERE short IN ('GMK', 'NSA', 'BOK');`);
   const mod = await import('../lib/store.js?v5to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '9');
+  assert.equal(t.settings.data_version, '10');
   assert.equal(t.teams.length, 13);
   assert.ok(!t.teams.some((x) => x.name.startsWith('Équipe ')));
   assert.equal(groupOf(t, 'A'), OFFICIAL_A);
@@ -388,7 +388,7 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   assert.equal(before[0].n, 163 - 4 + 3 + 1 + 1);
   const mod = await import('../lib/store.js?v6to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '9');
+  assert.equal(t.settings.data_version, '10');
   assert.equal(t.teams.find((x) => x.short === 'U18').name, 'U18');
   assert.equal(t.settings.slots, '1-20:00,1-22:00,2-20:00,3-20:00,3-22:00,6-22:00');
   assert.equal(t.teams.length, 13);
@@ -433,7 +433,7 @@ test('v6 -> v7 : un match déjà commencé protège le calendrier, abréviation 
   await adapter.exec("UPDATE matches SET status = 'live', period = '1H' WHERE id = 1; UPDATE teams SET short = 'TAS' WHERE short = 'TL';");
   const mod = await import('../lib/store.js?v6to7c');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '9');
+  assert.equal(t.settings.data_version, '10');
   assert.equal(t.matches.length, 31, 'calendrier laissé tel quel');
   assert.equal(t.matchById.get(1).status, 'live');
   assert.equal(groupOf(t, 'B'), OFFICIAL_B, 'abréviation TL rétablie à partir du nom');
@@ -524,7 +524,7 @@ test('v7 -> v8 : Le Centre devient U18 sans toucher au calendrier ni aux résult
   const before = await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id');
   const mod = await import('../lib/store.js?v7to8');
   const t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '9');
+  assert.equal(t.settings.data_version, '10');
   const u18 = t.teams.find((x) => x.short === 'U18');
   assert.equal(u18.name, 'U18');
   assert.ok(!t.teams.some((x) => x.short === 'LC' || x.name === 'Le Centre'));
@@ -540,14 +540,25 @@ test('v9 : U18 retrouve le groupe B après le passage d\'un ancien déploiement,
   const before = await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id');
   const mod = await import('../lib/store.js?v9');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '9');
+  assert.equal(t.settings.data_version, '10');
   assert.equal(groupOf(t, 'B'), OFFICIAL_B);
   assert.equal(groupOf(t, 'A'), OFFICIAL_A);
   assert.deepEqual(await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id'), before);
   // une base d'une version plus récente n'est pas modifiée par ce code
-  await adapter.exec("UPDATE teams SET grp = NULL WHERE short = 'U18'; UPDATE settings SET value = '10' WHERE key = 'data_version';");
+  await adapter.exec("UPDATE teams SET grp = NULL WHERE short = 'U18'; UPDATE settings SET value = '11' WHERE key = 'data_version';");
   const mod2 = await import('../lib/store.js?v9b');
   t = await mod2.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   assert.equal(t.teams.find((x) => x.short === 'U18').grp, null);
+});
+
+test('v10 : Guelor (Z Team) est remplacé par Stephane', async () => {
+  await adapter.exec("UPDATE players SET first_name = NULL, last_name = 'Guelor' WHERE last_name = 'Stephane'; UPDATE settings SET value = '9' WHERE key = 'data_version';");
+  const mod = await import('../lib/store.js?v10');
+  const t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.settings.data_version, '10');
+  const zt = t.teams.find((x) => x.short === 'ZT');
+  const names = t.players.filter((p) => p.team_id === zt.id).map((p) => p.last_name);
+  assert.ok(names.includes('Stephane'));
+  assert.ok(!names.includes('Guelor'));
 });
