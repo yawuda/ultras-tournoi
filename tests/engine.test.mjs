@@ -130,7 +130,7 @@ test('vraies équipes : 2 groupes et programme officiel', async () => {
   const { directSpots, bestThirdsCount, slotLabel, matchTitle } = await import('../lib/engine.js');
   const d = buildReal();
   assert.equal(d.teams.length, 13);
-  assert.equal(d.players.length, 163);
+  assert.equal(d.players.length, 164);
   const names = (g) => d.teams.filter((t) => t.grp === g).map((t) => t.name).sort((a, b) => a.localeCompare(b, 'fr'));
   assert.deepEqual(names('A'), ['Espérance de Tunis (EST)', 'Les Aigles', 'Panthers Team', 'Smart Construction', 'Star Group (SG)', 'Sunrise Team', 'Z Team']);
   assert.deepEqual(names('B'), ['Bokutani', 'G.M.K', 'Nsarieh', 'Tasty Life', 'Tequila', 'U18']);
@@ -187,7 +187,7 @@ test('vraies équipes : 2 groupes et programme officiel', async () => {
   // effectifs du 14 novembre
   const squad = (short) => d.players.filter((p) => p.team_id === d.teams.find((t) => t.short === short).id);
   const sizes = Object.fromEntries(d.teams.map((t) => [t.short, squad(t.short).length]));
-  assert.deepEqual(sizes, { SUN: 13, TL: 13, SG: 10, GMK: 13, U18: 11, PAN: 14, SMC: 12, NSA: 11, EST: 13, AIG: 13, ZT: 12, BOK: 14, TEQ: 14 });
+  assert.deepEqual(sizes, { SUN: 13, TL: 13, SG: 10, GMK: 13, U18: 11, PAN: 14, SMC: 12, NSA: 11, EST: 13, AIG: 13, ZT: 13, BOK: 14, TEQ: 14 });
   assert.ok(squad('TEQ').find((p) => p.last_name === 'Tiger').is_captain);
   assert.equal(squad('TEQ').find((p) => p.last_name === 'Kambamba').position, 'G');
   assert.ok(squad('SG').some((p) => p.last_name === 'Kabongo Tshilumba Gabriel (KBG)'));

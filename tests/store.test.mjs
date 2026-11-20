@@ -224,7 +224,7 @@ test('migration : une base en démo passe sur les vraies équipes', async () => 
   const t = await mod.loadTournament({ fresh: true });
   assert.equal(t.teams[0].name, 'Sunrise Team');
   assert.equal(t.settings.demo, '0');
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   assert.equal(t.matches.length, 33);
   assert.equal(t.matches.filter((m) => m.status !== 'scheduled').length, 0);
   assert.equal((await S.listUsers(boss)).length, 3, 'comptes conservés');
@@ -257,7 +257,7 @@ test('v3 : Les Aigles et Z Team remplacent les places vides, capitaines', async 
   assert.equal(aigle.name, 'Les Aigles');
   assert.equal(z.name, 'Z Team');
   assert.equal(t.players.filter((p) => p.team_id === 10).length, 13);
-  assert.equal(t.players.filter((p) => p.team_id === 11).length, 12);
+  assert.equal(t.players.filter((p) => p.team_id === 11).length, 13);
   assert.ok(t.players.some((p) => p.team_id === 11 && p.last_name === 'Matta' && p.position === 'G'));
   const gmk = t.teams.find((x) => x.short === 'GMK');
   const firstGmk = t.players.find((p) => p.team_id === gmk.id);
@@ -333,7 +333,7 @@ test('v5 -> v7 : places vides supprimées, Tequila ajoutée, 2 groupes', async (
     UPDATE teams SET grp = 'D' WHERE short IN ('GMK', 'NSA', 'BOK');`);
   const mod = await import('../lib/store.js?v5to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   assert.equal(t.teams.length, 13);
   assert.ok(!t.teams.some((x) => x.name.startsWith('Équipe ')));
   assert.equal(groupOf(t, 'A'), OFFICIAL_A);
@@ -347,7 +347,7 @@ test('v5 -> v7 : places vides supprimées, Tequila ajoutée, 2 groupes', async (
   const mod2 = await import('../lib/store.js?v5to7b');
   t = await mod2.loadTournament({ fresh: true });
   assert.equal(t.teams.length, 13);
-  assert.equal(t.players.length, 163);
+  assert.equal(t.players.length, 164);
   assert.equal(t.matches.length, 33);
 });
 
@@ -385,10 +385,10 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   await adapter.exec(`INSERT INTO players (team_id, first_name, last_name, number) VALUES (${lc}, 'Joueur', 'Ajouté', 99);
     UPDATE players SET number = 10 WHERE last_name = 'Bourgi' AND first_name = 'Ali';`);
   const before = await adapter.q('SELECT count(*)::int AS n FROM players');
-  assert.equal(before[0].n, 163 - 4 + 3 + 1 + 1);
+  assert.equal(before[0].n, 164 - 4 + 3 + 1 + 1);
   const mod = await import('../lib/store.js?v6to7');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   assert.equal(t.teams.find((x) => x.short === 'U18').name, 'U18');
   assert.equal(t.settings.slots, '1-20:00,1-22:00,2-20:00,3-20:00,3-22:00,6-22:00');
   assert.equal(t.teams.length, 13);
@@ -400,13 +400,13 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   assert.deepEqual(squadOf(t, 'U18').map(label).sort(), ['Adel Karim', 'Ahmad Bourgi', 'Ali Bourgi', 'Bobo', 'Hassan Attie', 'Iyad Achour', 'Jad Achour', 'Jk', 'Joueur Ajouté', 'Mahdi Sabra', 'Mardoche Liwanga', 'Yan']);
   assert.equal(squadOf(t, 'U18').find((p) => p.last_name === 'Bourgi' && p.first_name === 'Ali').number, 10);
   assert.ok(squadOf(t, 'U18')[0].is_captain);
-  assert.equal(squadOf(t, 'ZT').length, 12);
+  assert.equal(squadOf(t, 'ZT').length, 13);
   assert.ok(['Alvin', 'Anthony NS 17', 'Alex Ns'].every((n) => squadOf(t, 'ZT').some((p) => label(p) === n)));
   assert.equal(squadOf(t, 'SG').length, 10);
   assert.ok(squadOf(t, 'SG').some((p) => label(p) === 'Kabongo Tshilumba Gabriel (KBG)'));
   assert.ok(!squadOf(t, 'SG').some((p) => p.last_name === 'Gabriel'));
   assert.equal(squadOf(t, 'SUN').length, 13);
-  assert.equal(t.players.length, 164);
+  assert.equal(t.players.length, 165);
   for (const tm of t.teams) assert.equal(t.players.filter((p) => p.team_id === tm.id && p.is_captain).length, 1, tm.name);
   // programme officiel
   assert.equal(t.matches.length, 33);
@@ -423,7 +423,7 @@ test('v6 -> v7 : base en ligne (3 groupes) vers le programme officiel', async ()
   await adapter.exec("UPDATE settings SET value = '6' WHERE key = 'data_version';");
   const mod2 = await import('../lib/store.js?v6to7b');
   t = await mod2.loadTournament({ fresh: true });
-  assert.equal(t.players.length, 164);
+  assert.equal(t.players.length, 165);
   assert.equal(t.matches.length, 33);
   await adapter.exec("DELETE FROM players WHERE last_name = 'Ajouté';");
 });
@@ -433,7 +433,7 @@ test('v6 -> v7 : un match déjà commencé protège le calendrier, abréviation 
   await adapter.exec("UPDATE matches SET status = 'live', period = '1H' WHERE id = 1; UPDATE teams SET short = 'TAS' WHERE short = 'TL';");
   const mod = await import('../lib/store.js?v6to7c');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   assert.equal(t.matches.length, 31, 'calendrier laissé tel quel');
   assert.equal(t.matchById.get(1).status, 'live');
   assert.equal(groupOf(t, 'B'), OFFICIAL_B, 'abréviation TL rétablie à partir du nom');
@@ -443,7 +443,7 @@ test('v6 -> v7 : un match déjà commencé protège le calendrier, abréviation 
   await S.resetMatch(admin, 1);
   assert.equal(await S.rebuildSchedule(admin), 33);
   t = await S.loadTournament({ fresh: true });
-  assert.equal(t.players.length, 163);
+  assert.equal(t.players.length, 164);
 });
 
 test('format à 2 groupes : tournoi complet jusqu\'à la finale', async () => {
@@ -524,7 +524,7 @@ test('v7 -> v8 : Le Centre devient U18 sans toucher au calendrier ni aux résult
   const before = await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id');
   const mod = await import('../lib/store.js?v7to8');
   const t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   const u18 = t.teams.find((x) => x.short === 'U18');
   assert.equal(u18.name, 'U18');
   assert.ok(!t.teams.some((x) => x.short === 'LC' || x.name === 'Le Centre'));
@@ -540,15 +540,15 @@ test('v9 : U18 retrouve le groupe B après le passage d\'un ancien déploiement,
   const before = await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id');
   const mod = await import('../lib/store.js?v9');
   let t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   assert.equal(groupOf(t, 'B'), OFFICIAL_B);
   assert.equal(groupOf(t, 'A'), OFFICIAL_A);
   assert.deepEqual(await adapter.q('SELECT id, home_id, away_id, kickoff, status FROM matches ORDER BY id'), before);
   // une base d'une version plus récente n'est pas modifiée par ce code
-  await adapter.exec("UPDATE teams SET grp = NULL WHERE short = 'U18'; UPDATE settings SET value = '11' WHERE key = 'data_version';");
+  await adapter.exec("UPDATE teams SET grp = NULL WHERE short = 'U18'; UPDATE settings SET value = '12' WHERE key = 'data_version';");
   const mod2 = await import('../lib/store.js?v9b');
   t = await mod2.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '11');
+  assert.equal(t.settings.data_version, '12');
   assert.equal(t.teams.find((x) => x.short === 'U18').grp, null);
 });
 
@@ -556,9 +556,19 @@ test('v10 : Guelor (Z Team) est remplacé par Stephane', async () => {
   await adapter.exec("UPDATE players SET first_name = NULL, last_name = 'Guelor' WHERE last_name = 'Stephane'; UPDATE settings SET value = '9' WHERE key = 'data_version';");
   const mod = await import('../lib/store.js?v10');
   const t = await mod.loadTournament({ fresh: true });
-  assert.equal(t.settings.data_version, '10');
+  assert.equal(t.settings.data_version, '11');
   const zt = t.teams.find((x) => x.short === 'ZT');
   const names = t.players.filter((p) => p.team_id === zt.id).map((p) => p.last_name);
   assert.ok(names.includes('Stephane'));
   assert.ok(!names.includes('Guelor'));
+});
+
+test('v11 : Samuel rejoint Z Team', async () => {
+  await adapter.exec("DELETE FROM players WHERE last_name = 'Samuel' OR first_name = 'Samuel'; UPDATE settings SET value = '10' WHERE key = 'data_version';");
+  const mod = await import('../lib/store.js?v11');
+  const t = await mod.loadTournament({ fresh: true });
+  assert.equal(t.settings.data_version, '11');
+  const zt = t.teams.find((x) => x.short === 'ZT');
+  const names = t.players.filter((p) => p.team_id === zt.id).map((p) => [p.first_name, p.last_name].filter(Boolean).join(' '));
+  assert.equal(names.filter((n) => n === 'Samuel').length, 1);
 });
