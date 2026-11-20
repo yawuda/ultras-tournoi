@@ -157,6 +157,7 @@ export function RankList({ rows, unit, limit }) {
 
 export function Flash({ sp }) {
   if (sp?.erreur) return <p className="flash err" role="alert">{String(sp.erreur)}</p>;
+  if (sp?.info) return <p className="flash ok" role="status">{String(sp.info)}</p>;
   if (sp?.ok) return <p className="flash ok" role="status">Enregistré.</p>;
   return null;
 }

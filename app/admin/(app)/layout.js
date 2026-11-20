@@ -24,6 +24,7 @@ export default async function AdminLayout({ children }) {
                 <Link href="/admin/equipes">Équipes</Link>
                 <Link href="/admin/joueurs">Joueurs</Link>
                 <Link href="/admin/exports">Exports</Link>
+                <Link href="/admin/sauvegardes">Sauvegardes</Link>
                 <Link href="/admin/historique">Historique</Link>
                 <Link href="/admin/parametres">Paramètres</Link>
               </>

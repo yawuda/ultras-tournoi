@@ -18,6 +18,12 @@ Application web de gestion et de suivi du tournoi de football 8 contre 8 Ultras 
 - Classements, qualifications, statistiques et suspensions sont **calculés** à partir des matchs et des événements (rien n'est stocké en double) : `lib/engine.js`.
 - Règles : victoire 3 pts, nul 1 pt ; départage configurable (points, différence, buts marqués, confrontation directe, fair-play) ; phase finale avec prolongation 2 × 10 min puis tirs au but ; suspension après un rouge ou 3 jaunes cumulés.
 
+## Sauvegardes
+
+- Chaque nuit vers 4 h (heure de Kinshasa), la tâche planifiée Vercel (`vercel.json` → `/api/cron/sauvegarde`) fait une copie complète des données dans la table `backups` (45 gardées), et dans Vercel Blob si `BLOB_READ_WRITE_TOKEN` est défini.
+- Back-office → *Sauvegardes* : sauvegarde manuelle, téléchargement (.json), restauration (super administrateur, l'état actuel est sauvegardé juste avant).
+- Facultatif : définir `CRON_SECRET` dans Vercel pour réserver l'appel planifié à Vercel (sans lui, l'appel reste sans risque : une sauvegarde automatique au plus toutes les 20 heures).
+
 ## Premier lancement
 
 1. Ouvrir `/admin` : le premier compte créé devient super administrateur.

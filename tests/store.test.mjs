@@ -572,3 +572,55 @@ test('v11 : Samuel rejoint Z Team', async () => {
   const names = t.players.filter((p) => p.team_id === zt.id).map((p) => [p.first_name, p.last_name].filter(Boolean).join(' '));
   assert.equal(names.filter((n) => n === 'Samuel').length, 1);
 });
+
+test('sauvegardes : copie, restauration exacte, sécurité', async () => {
+  const B = await import('../lib/backup.js');
+  const strip = (b) => { const t = { ...b.tables }; delete t.audit_log; return JSON.stringify(t); };
+  // droits
+  await assert.rejects(() => B.manualBackup(manager), /non autorisée/);
+  await assert.rejects(() => B.restoreBackup(admin, { id: 1 }), /non autorisée/);
+  // sauvegarde manuelle
+  const ref = await B.snapshot();
+  const saved = await B.manualBackup(admin);
+  let list = await B.listBackups(admin);
+  assert.equal(list[0].id, saved.id);
+  assert.equal(list[0].kind, 'manuelle');
+  assert.match(list[0].summary, /13 équipes · \d+ joueurs · 33 matchs/);
+  // automatique : une seule par 20 heures
+  const a1 = await B.autoBackup();
+  assert.ok(a1.id);
+  assert.equal((await B.autoBackup()).skipped, true);
+  // une session ouverte avant la restauration
+  const { token } = await S.login({ username: 'chef', password: 'motdepasse1' });
+  // dégâts : un joueur supprimé, une équipe renommée, un match effacé
+  await adapter.exec("DELETE FROM players WHERE id = (SELECT min(id) FROM players); UPDATE teams SET name = 'Cassé' WHERE short = 'ZT'; DELETE FROM matches WHERE id = (SELECT max(id) FROM matches);");
+  assert.notEqual(strip(await B.snapshot()), strip(ref));
+  // fichiers refusés : rien n'est touché
+  const damaged = strip(await B.snapshot());
+  await assert.rejects(() => B.restoreBackup(boss, { text: 'pas du json' }), /illisible/);
+  await assert.rejects(() => B.restoreBackup(boss, { text: JSON.stringify({ format: 'autre' }) }), /pas une sauvegarde/);
+  const empty = JSON.parse((await B.backupText(admin, saved.id)).text);
+  empty.tables.players = [];
+  await assert.rejects(() => B.restoreBackup(boss, { text: JSON.stringify(empty) }), /vide/);
+  assert.equal(strip(await B.snapshot()), damaged);
+  // restauration par numéro : retour exact à l'état sauvegardé
+  const res = await B.restoreBackup(boss, { id: saved.id });
+  assert.equal(strip(await B.snapshot()), strip(ref));
+  assert.equal(await S.userFromToken(token), null, 'sessions fermées');
+  list = await B.listBackups(admin);
+  assert.ok(list.some((r) => r.id === res.before && r.kind === 'avant-restauration'));
+  let t = await S.loadTournament({ fresh: true });
+  assert.equal(t.teams.find((x) => x.short === 'ZT').name, 'Z Team');
+  // la restauration elle-même peut être annulée (état « cassé » retrouvé)
+  await B.restoreBackup(boss, { id: res.before });
+  assert.equal(strip(await B.snapshot()), damaged);
+  // restauration depuis un fichier téléchargé
+  await B.restoreBackup(boss, { text: (await B.backupText(admin, saved.id)).text });
+  assert.equal(strip(await B.snapshot()), strip(ref));
+  // l'application fonctionne normalement après restauration (compteurs d'identifiants recalés)
+  t = await S.loadTournament({ fresh: true });
+  const zt = t.teams.find((x) => x.short === 'ZT');
+  await adapter.exec(`INSERT INTO players (team_id, last_name) VALUES (${zt.id}, 'Nouveau');`);
+  assert.ok((await S.login({ username: 'chef', password: 'motdepasse1' })).token);
+  assert.ok((await S.auditLog(boss, 5)).some((r) => r.action === "Restauration d'une sauvegarde"));
+});

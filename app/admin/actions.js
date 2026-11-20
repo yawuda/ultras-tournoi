@@ -276,3 +276,36 @@ export async function rebuildScheduleAction() {
   }
   back('/admin/parametres');
 }
+
+// ---------- Sauvegardes ----------
+export async function manualBackupAction() {
+  try {
+    const B = await import('@/lib/backup.js');
+    await B.manualBackup(await me());
+  } catch (e) {
+    back('/admin/sauvegardes', e);
+  }
+  back('/admin/sauvegardes');
+}
+export async function restoreBackupAction(fd) {
+  let res;
+  try {
+    const B = await import('@/lib/backup.js');
+    if (String(fd.get('confirm') || '').trim().toUpperCase() !== 'RESTAURER') throw new S.AppError('Tapez RESTAURER pour confirmer la restauration.');
+    const file = fd.get('file');
+    let text = null;
+    if (file && typeof file !== 'string' && file.size) {
+      if (file.size > 5 * 1024 * 1024) throw new S.AppError('Fichier trop lourd (5 Mo maximum).');
+      text = await file.text();
+    }
+    const id = fd.get('id');
+    if (!text && !id) throw new S.AppError('Choisissez une sauvegarde ou un fichier.');
+    res = await B.restoreBackup(await me(), { id, text });
+    refresh();
+  } catch (e) {
+    back('/admin/sauvegardes', e);
+  }
+  // Les comptes ont été restaurés : il faut se reconnecter.
+  await clearSession();
+  redirect('/admin/login?info=' + encodeURIComponent(`Sauvegarde du ${res.created_at} restaurée. L'état précédent est gardé (sauvegarde n° ${res.before}). Reconnectez-vous.`));
+}
